@@ -776,6 +776,7 @@ async function confirmarExportarFicha() {
     { Campo: 'DNI', Valor: sanitizarValorExcel(p.paciente_dni) },
     { Campo: 'Nombre', Valor: sanitizarValorExcel(p.paciente_nombre) },
     { Campo: 'Apellido', Valor: sanitizarValorExcel(p.paciente_apellido) },
+    { Campo: 'Consentimiento Ético Ley 26.657', Valor: p.consentimiento_informado ? 'SI' : 'NO' },
     { Campo: 'Nivel Triaje (ICAP)', Valor: sanitizarValorExcel(p.triaje_nivel) },
     { Campo: 'Patología Dual', Valor: sanitizarValorExcel(p.patologia_dual) },
     { Campo: 'Sustancia Principal', Valor: sanitizarValorExcel(p.sustancia_consumida) },
@@ -834,6 +835,13 @@ function cargarFichaParaEditar() {
   };
 
   const p = state.pacienteActual;
+  
+  // Cargar casilla de consentimiento
+  const chkConsentimiento = document.getElementById('consentimientoInformado');
+  if (chkConsentimiento) {
+    chkConsentimiento.checked = p.consentimiento_informado ?? true;
+  }
+
   setVal('triajeNivel', p.triaje_nivel);
   setVal('patologiaDual', p.patologia_dual);
   setVal('riesgoInminente', p.riesgo_inminente);
@@ -872,6 +880,14 @@ async function guardarHistoriaClinica(e) {
   e.preventDefault();
   const clinicalStatus = document.getElementById('clinicalStatus');
 
+  // Validar explícitamente el consentimiento ética/legal
+  const consentimientoChecked = document.getElementById('consentimientoInformado')?.checked;
+
+  if (!consentimientoChecked) {
+    alert('Debe confirmar el resguardo ético y consentimiento de datos (Ley 26.657) antes de guardar la ficha.');
+    return;
+  }
+
   const getVal = (id) => {
     const val = document.getElementById(id)?.value?.trim();
     return val === '' ? null : val;
@@ -879,6 +895,7 @@ async function guardarHistoriaClinica(e) {
 
   const payload = {
     medico_id: state.currentUser.id,
+    consentimiento_informado: consentimientoChecked,
     triaje_nivel: getVal('triajeNivel'),
     patologia_dual: getVal('patologiaDual'),
     riesgo_inminente: getVal('riesgoInminente'),
