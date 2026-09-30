@@ -408,6 +408,15 @@
                         1. Identificación y Sociodemografía
                     </h4>
 
+                    <!-- Consentimiento y Resguardo Ético (Ley 26.657) -->
+                    <div class="bg-white p-3 rounded-md border border-sky-300 flex items-start gap-3">
+                        <input type="checkbox" id="consentimientoInformado" required class="mt-1 h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500">
+                        <label for="consentimientoInformado" class="text-xs text-slate-700 leading-snug">
+                            <span class="font-bold text-slate-900 block">Consentimiento y Resguardo de Datos Personales (Ley 26.657) *</span>
+                            Confirmo que el paciente (o su representante legal) ha sido informado sobre la atención, autorizando el registro de sus datos bajo estrictos criterios de confidencialidad, secreto profesional y secreto estadístico institucional.
+                        </label>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700" for="pacienteDni">DNI / Documento *</label>
@@ -758,10 +767,11 @@
         </div>
     </div>
 
+    <!-- CREDENCIALES APUNTANDO A TU NUEVO PROYECTO DE SUPABASE -->
     <script>
         window.ENV = window.ENV || {
             SUPABASE_URL: 'https://cerffbudjmvtcyxolzqb.supabase.co',
-            SUPABASE_ANON_KEY: 'sb_publishable_rpLb8iblumfLQ2Ybns1Kbw_P4dUyqpP'
+            SUPABASE_ANON_KEY: 'sb_publishable_rpLb8iblumfLQ2Ybn...' // Reemplazar por tu clave Publishable completa
         };
     </script>
     <script src="app.js" defer></script>
