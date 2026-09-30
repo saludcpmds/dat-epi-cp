@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;">
+    <title>Dirección de Asistencia y Tratamiento - MDS Corrientes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        .frost {
+            backdrop-filter: blur(12px);
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+        #resultadoBusqueda,
+        #resultadoBusqueda table,
+        #tablaPacientesBody,
+        #tablaPacientesBody td,
+        #detalleFichaPaciente,
+        #timelineContenedor {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        @media (max-width: 640px) {
+            header .banner-decor { display: none !important; }
+            header .header-titles { display: none !important; }
+            #userEmail {
+                max-width: 42vw;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: 0.7rem;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            main.dashboard-main {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            .hero-dashboard {
+                padding: 1.25rem !important;
+                border-radius: 1.25rem !important;
+            }
+            .hero-dashboard h1 { font-size: 1.75rem !important; }
+            .tabla-scroll {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #formularioSection .form-card { padding: 1.25rem !important; }
+            #detalleFichaPaciente {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans text-slate-800 antialiased">
+
+    <!-- 1. LOGIN -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border-t-4 border-sky-600">
+            <div class="text-center mb-6">
+                <h1 class="text-xl font-bold text-gray-900 leading-snug">Dirección de Asistencia y Tratamiento</h1>
+                <p class="text-gray-700 text-sm font-semibold">Provincia de Corrientes</p>
+            </div>
+            <form id="loginForm" class="space-y-4" autocomplete="on">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700" for="loginEmail">Correo Electrónico</label>
+                    <input type="email" id="loginEmail" required autocomplete="username"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-sky-500 focus:border-sky-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700" for="loginPassword">Contraseña</label>
+                    <input type="password" id="loginPassword" required autocomplete="current-password"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-sky-500 focus:border-sky-500">
+                </div>
+                <button type="submit" class="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 font-semibold transition duration-200">
+                    Iniciar Sesión
+                </button>
+            </form>
+            <p id="loginError" class="text-red-500 text-sm mt-3 text-center hidden" role="alert"></p>
+        </div>
+    </div>
+
+    <!-- 2. DASHBOARD -->
+    <div id="dashboardSection" class="hidden min-h-screen pb-12">
+        <header class="w-full bg-[#A4C2E8] shadow-sm mb-6 font-['Barlow',sans-serif]">
+            <div class="w-full flex items-center justify-between pr-4 sm:pr-6 h-16 sm:h-20 overflow-hidden">
+                <div class="flex items-center h-full gap-3 sm:gap-5">
+                    <img src="baner-rojo.jpg" alt="Bloque Rojo" class="banner-decor h-full w-auto object-cover flex-shrink-0">
+                    <img src="banner-amarillo.png" alt="Bloque Amarillo" class="banner-decor h-full w-auto object-cover flex-shrink-0 -ml-3 sm:-ml-5">
+                    <img src="escudo-corrientes.png" alt="Escudo Corrientes" class="h-12 sm:h-16 w-auto object-contain flex-shrink-0 ml-1 sm:ml-2">
+                    <div class="header-titles flex flex-col justify-center leading-none text-slate-900">
+                        <span class="text-xs sm:text-base font-bold tracking-tight">Ministerio de</span>
+                        <span class="text-xs sm:text-base font-bold tracking-tight">Desarrollo Social</span>
+                        <span class="text-sm sm:text-xl font-black uppercase tracking-wider mt-0.5">CORRIENTES</span>
+                    </div>
+                    <div class="hidden md:block h-10 w-px bg-slate-400/40 mx-1"></div>
+                    <div class="hidden md:flex flex-col justify-center leading-tight text-slate-800">
+                        <span class="text-xs sm:text-sm font-medium">Dirección de</span>
+                        <span class="text-xs sm:text-sm font-medium">Asistencia y</span>
+                        <span class="text-xs sm:text-sm font-medium">Tratamiento</span>
+                    </div>
+                    <div class="hidden lg:flex flex-col justify-center leading-none text-slate-900 ml-3">
+                        <span class="text-base sm:text-xl font-extrabold italic tracking-tighter">Siempre</span>
+                        <span class="text-base sm:text-xl font-extrabold italic tracking-tighter">cerca</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <span id="userEmail" class="text-xs sm:text-sm font-medium text-slate-800 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-white/50"></span>
+                    <button id="logoutBtn" type="button"
+                            class="text-xs sm:text-sm bg-red-500 hover:bg-red-600 text-white font-medium px-3 sm:px-4 py-1.5 rounded-lg shadow-sm transition-colors duration-150">
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main mx-auto max-w-7xl px-4 sm:px-6 space-y-4 sm:space-y-6">
+            <section class="hero-dashboard relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-sky-50/80 via-white to-sky-50/50 p-8 shadow-sm">
+                <div class="flex flex-wrap items-end justify-between gap-6">
+                    <div>
+                        <p class="font-mono text-xs uppercase tracking-widest text-sky-700 font-semibold">REGISTRO ÚNICO POR DNI Y SALA DE SITUACIÓN</p>
+                        <h1 class="mt-2 font-bold text-4xl lg:text-5xl tracking-tight text-slate-900">Historias Clínicas</h1>
+                        <p class="mt-2 text-sm text-slate-600 max-w-xl">Sistema epidemiológico de asistencia y seguimiento de consumos problemáticos.</p>
+                    </div>
+                    <div class="text-right">
+                        <span id="totalFichasActivas" class="text-3xl font-bold text-slate-900 block">0</span>
+                        <span class="text-xs font-mono text-slate-500">fichas activas</span>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <div class="relative flex-1">
+                        <input type="text" id="buscarDNI"
+                               placeholder="DNI, documento o nombre"
+                               maxlength="80"
+                               class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-4 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition">
+                    </div>
+                    <button id="btnBuscar" type="button"
+                            class="w-full sm:w-auto bg-sky-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-sky-700 transition">
+                        Buscar
+                    </button>
+                    <button id="btnNuevaFicha" type="button"
+                            class="w-full sm:w-auto bg-slate-900 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-slate-800 transition">
+                        + Nueva ficha
+                    </button>
+                </div>
+
+                <!-- Métricas Básicas -->
+                <div class="mt-4 flex flex-wrap gap-2 text-xs">
+                    <div class="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-sm">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                        <span id="cantTratamiento" class="font-bold text-slate-800">0</span>
+                        <span class="text-slate-600">en tratamiento</span>
+                    </div>
+                    <div class="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-sm">
+                        <span class="h-2 w-2 rounded-full bg-slate-400"></span>
+                        <span id="cantSeguimiento" class="font-bold text-slate-800">0</span>
+                        <span class="text-slate-600">en seguimiento</span>
+                    </div>
+                    <div class="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-sm">
+                        <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+                        <span id="cantEgreso" class="font-bold text-slate-800">0</span>
+                        <span class="text-slate-600">egreso</span>
+                    </div>
+                </div>
+
+                <!-- Indicadores Epidemiológicos (Sala de Situación) -->
+                <div class="mt-6 border-t border-sky-200/60 pt-4">
+                    <p class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Indicadores Clave de Sala de Situación</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="bg-white/80 rounded-xl p-3 border border-slate-200 shadow-sm">
+                            <span class="text-xs text-slate-500 block">Prevalencia Policonsumo</span>
+                            <span id="statPoliconsumo" class="text-xl font-extrabold text-indigo-900">0%</span>
+                        </div>
+                        <div class="bg-white/80 rounded-xl p-3 border border-slate-200 shadow-sm">
+                            <span class="text-xs text-slate-500 block">Ingresos por Urgencia/Guardia</span>
+                            <span id="statGuardia" class="text-xl font-extrabold text-rose-800">0%</span>
+                        </div>
+                        <div class="bg-white/80 rounded-xl p-3 border border-slate-200 shadow-sm">
+                            <span class="text-xs text-slate-500 block">Atención Ambulatoria (ICAP)</span>
+                            <span id="statIcap" class="text-xl font-extrabold text-sky-800">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="adminActions" class="mt-4 hidden space-y-4">
+                    <div>
+                        <button id="btnExportarTodo" type="button"
+                                class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+                            <span>⬇ Exportar base completa (.xlsx)</span>
+                        </button>
+                        <p class="text-[10px] text-slate-500 mt-1">Solo visible para administradores / epidemiología</p>
+                    </div>
+
+                    <div id="panelAlertasSeguridad" class="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 shadow-sm">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white text-xs font-bold" id="badgeAlertasCount">0</span>
+                                <h3 class="text-sm font-bold text-amber-900 uppercase tracking-wide">Alertas de seguridad</h3>
+                            </div>
+                            <button type="button" id="btnRefrescarAlertas"
+                                    class="text-[11px] font-semibold text-amber-800 hover:text-amber-950 underline">
+                                Actualizar
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-amber-800/80 mb-3">
+                            Exportaciones fuera de horario, de alto volumen o marcadas con alerta. Datos desde el log de auditoría.
+                        </p>
+                        <div id="listaAlertasSeguridad" class="space-y-2 max-h-64 overflow-y-auto text-xs">
+                            <p class="text-slate-500 text-center py-2">Cargando alertas...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wide">Resultados de la búsqueda</h2>
+                    <span id="contadorResultados" class="font-mono text-xs text-slate-500">0 fichas</span>
+                </div>
+                <div id="resultadoBusqueda">
+                    <div id="resultadoCardsMobile" class="sm:hidden space-y-3 p-4">
+                        <p class="text-center text-xs text-slate-400 py-6">
+                            Ingrese un DNI o nombre y presione Buscar.
+                        </p>
+                    </div>
+                    <div class="hidden sm:block tabla-scroll">
+                        <table class="w-full text-sm text-left min-w-[560px]">
+                            <thead class="bg-slate-50 text-xs font-mono uppercase text-slate-500 border-b border-slate-100">
+                                <tr>
+                                    <th class="px-4 lg:px-6 py-3 font-semibold">DNI</th>
+                                    <th class="px-4 lg:px-6 py-3 font-semibold">Nombre</th>
+                                    <th class="px-4 lg:px-6 py-3 font-semibold">Alta</th>
+                                    <th class="px-4 lg:px-6 py-3 font-semibold">Estado</th>
+                                    <th class="px-4 lg:px-6 py-3 font-semibold text-right">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaPacientesBody" class="divide-y divide-slate-100 text-slate-700">
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-xs text-slate-400">
+                                        Ingrese un DNI o Nombre en el buscador y presione "Buscar" para ver resultados.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="detalleFichaPaciente" class="hidden bg-slate-50/50 rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p id="fichaDniHeader" class="font-mono text-xs font-bold text-slate-400 uppercase tracking-wider">FICHA - DNI ...</p>
+                        <h2 id="fichaNombreHeader" class="text-2xl font-bold text-slate-900 mt-0.5">...</h2>
+                    </div>
+                    <div id="fichaEstadoBadge"></div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+                        <span id="cantIngresosFicha" class="text-3xl font-extrabold text-slate-900 block">0</span>
+                        <span class="text-xs text-slate-500 font-medium">Ingresos</span>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+                        <span id="cantEvolucionesFicha" class="text-3xl font-extrabold text-slate-900 block">0</span>
+                        <span class="text-xs text-slate-500 font-medium">Evoluciones</span>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
+                        <span id="cantDiasFicha" class="text-3xl font-extrabold text-slate-900 block">0</span>
+                        <span class="text-xs text-slate-500 font-medium">Días</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <h3 class="font-bold text-slate-800 text-base">Historial de ingresos y evoluciones</h3>
+                        <div class="flex items-center gap-2">
+                            <button id="btnNuevaEntrada" type="button"
+                                    class="text-sky-600 hover:text-sky-700 text-xs font-bold uppercase tracking-wider transition">
+                                + Nueva entrada
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="formNuevaEntrada" class="hidden bg-sky-50/50 p-4 rounded-xl border border-sky-200 space-y-3">
+                        <h4 class="text-xs font-bold text-sky-800 uppercase">Registrar nueva entrada</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600" for="tipoEntrada">Tipo de Entrada</label>
+                                <select id="tipoEntrada" class="mt-1 w-full text-xs p-2 border rounded-lg bg-white">
+                                    <option value="Evolución">Evolución</option>
+                                    <option value="Ingreso">Ingreso</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-medium text-slate-600" for="motivoEntrada">Motivo / Descripción</label>
+                                <input type="text" id="motivoEntrada" maxlength="500"
+                                       placeholder="Ej. Presenta mejoría en su tratamiento..."
+                                       class="mt-1 w-full text-xs p-2 border rounded-lg bg-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600" for="dispositivoEntrada">Dispositivo</label>
+                                <input type="text" id="dispositivoEntrada" maxlength="120"
+                                       placeholder="Ej. Unidad de contención"
+                                       class="mt-1 w-full text-xs p-2 border rounded-lg bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600" for="profesionalEntrada">Profesional a cargo</label>
+                                <input type="text" id="profesionalEntrada" maxlength="120"
+                                       placeholder="Ej. Pérez Juan"
+                                       class="mt-1 w-full text-xs p-2 border rounded-lg bg-white">
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button id="btnCancelarEntrada" type="button"
+                                    class="text-xs text-slate-500 px-3 py-1.5 rounded-lg border bg-white">Cancelar</button>
+                            <button id="btnGuardarEntrada" type="button"
+                                    class="text-xs text-white bg-sky-600 px-4 py-1.5 rounded-lg font-semibold hover:bg-sky-700">
+                                Guardar Entrada
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="timelineContenedor" class="relative border-l-2 border-sky-100 pl-6 space-y-6 ml-2"></div>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                        <select id="cambioEstadoRapido"
+                                class="w-full sm:w-64 text-sm font-semibold p-2.5 rounded-xl border border-slate-300 bg-white">
+                            <option value="en_tratamiento">En tratamiento</option>
+                            <option value="en_seguimiento">En seguimiento</option>
+                            <option value="egreso">Egreso</option>
+                        </select>
+                        <button id="btnExportarExcel" type="button"
+                                class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 font-semibold text-xs text-slate-700 transition flex items-center justify-center gap-2">
+                            <span>Exportar (.xlsx)</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 3. FORMULARIO COMPLETO Y EPIDEMIOLÓGICO -->
+    <div id="formularioSection" class="hidden min-h-screen py-8 px-4 flex justify-center">
+        <div class="form-card bg-white p-8 rounded-xl shadow-lg w-full max-w-5xl border-t-4 border-sky-600 space-y-8">
+            <div class="flex justify-between items-center border-b pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Nueva Historia Clínica y Registro Epidemiológico</h2>
+                    <p class="text-xs text-slate-500">Complete los bloques para dar de alta la ficha clínica e ingresar los datos a la Sala de Situación.</p>
+                </div>
+                <button id="btnVolverDashboard" type="button"
+                        class="text-xs bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 font-semibold transition">
+                    ← Volver al Panel
+                </button>
+            </div>
+
+            <form id="clinicalForm" class="space-y-6" novalidate>
+                
+                <!-- BLOQUE 0: TRIAJE Y EVALUACIÓN DE RIESGO (PROTOCOLOS ICAP) -->
+                <div class="bg-amber-50/60 p-5 rounded-lg border border-amber-200 space-y-4">
+                    <h4 class="text-sm font-bold text-amber-900 uppercase tracking-wide border-b border-amber-200 pb-2">
+                        0. Triaje Clínico y Asignación de Nivel (Protocolo ICAP)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="triajeNivel">Nivel de Atención Requerido *</label>
+                            <select id="triajeNivel" required class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar nivel...</option>
+                                <option value="Atencion Ambulatoria (ICAP)">Atención Ambulatoria (ICAP)</option>
+                                <option value="Derivacion Especializada">Derivación Especializada (3er Nivel/Comunidad)</option>
+                                <option value="Urgencia / Guardia General">Urgencia / Guardia Hospitalaria</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="patologiaDual">Patología Dual</label>
+                            <select id="patologiaDual" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="Inexistente o Compensada">Inexistente o Compensada</option>
+                                <option value="Descompensada / Alta Complejidad">Descompensada / Alta Complejidad</option>
+                                <option value="Crisis Sintomatica Aguda">Crisis Sintomática Aguda</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="riesgoInminente">Riesgo Cierto e Inminente</label>
+                            <select id="riesgoInminente" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="NO">NO (Estable)</option>
+                                <option value="SI_AUTO">SÍ - Autoagresividad</option>
+                                <option value="SI_HETERO">SÍ - Heteroagresividad</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOQUE 1: IDENTIFICACIÓN Y SOCIODEMOGRAFÍA -->
+                <div class="bg-sky-50/50 p-5 rounded-lg border border-sky-200 space-y-4">
+                    <h4 class="text-sm font-bold text-sky-800 uppercase tracking-wide border-b border-sky-200 pb-2">
+                        1. Identificación y Sociodemografía
+                    </h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="pacienteDni">DNI / Documento *</label>
+                            <input type="text" id="pacienteDni" required pattern="\d{7,11}" maxlength="11"
+                                   inputmode="numeric" title="Entre 7 y 11 dígitos"
+                                   placeholder="7 u 8 dígitos"
+                                   class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="pacienteNombre">Nombre *</label>
+                            <input type="text" id="pacienteNombre" required maxlength="80"
+                                   placeholder="Nombre completo" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="pacienteApellido">Apellido *</label>
+                            <input type="text" id="pacienteApellido" required maxlength="80"
+                                   placeholder="Apellido completo" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="estadoPaciente">Estado del Paciente *</label>
+                            <select id="estadoPaciente" required class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="en_tratamiento" selected>En tratamiento</option>
+                                <option value="en_seguimiento">En seguimiento</option>
+                                <option value="egreso">Egreso</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="sexo">Género / Sexo</label>
+                            <select id="sexo" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                                <option value="">Seleccionar...</option>
+                                <option value="Masculino">Masculino</option>
+                                <option value="Femenino">Femenino</option>
+                                <option value="Trans">Trans</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="fechaNacimiento">Fecha de Nacimiento</label>
+                            <input type="date" id="fechaNacimiento" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="edad">Edad</label>
+                            <input type="number" id="edad" min="0" max="120" placeholder="Años"
+                                   class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="grupoEtario">Grupo Etario</label>
+                            <select id="grupoEtario" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                                <option value="">Seleccionar...</option>
+                                <option value="Hasta 12 años">Hasta 12 años</option>
+                                <option value="De 13 a 17 años">De 13 a 17 años</option>
+                                <option value="De 18 a 29 años">De 18 a 29 años</option>
+                                <option value="De 30 a 45 años">De 30 a 45 años</option>
+                                <option value="De 46 a 59 años">De 46 a 59 años</option>
+                                <option value="60 años o más">60 años o más</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="localidad">Localidad (Corrientes)</label>
+                            <select id="localidad" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar localidad...</option>
+                                <option value="Ciudad de Corrientes">Ciudad de Corrientes</option>
+                                <option value="Bella Vista">Bella Vista</option>
+                                <option value="Curuzú Cuatiá">Curuzú Cuatiá</option>
+                                <option value="Empedrado">Empedrado</option>
+                                <option value="Esquina">Esquina</option>
+                                <option value="Gobernador Virasoro">Gobernador Virasoro</option>
+                                <option value="Goya">Goya</option>
+                                <option value="Itatí">Itatí</option>
+                                <option value="Ituzaingó">Ituzaingó</option>
+                                <option value="Mercedes">Mercedes</option>
+                                <option value="Monte Caseros">Monte Caseros</option>
+                                <option value="Paso de los Libres">Paso de los Libres</option>
+                                <option value="Saladas">Saladas</option>
+                                <option value="Santo Tomé">Santo Tomé</option>
+                                <option value="Otra Localidad">Otra Localidad</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="barrioResidencia">Barrio de Residencia</label>
+                            <input type="text" id="barrioResidencia" maxlength="100" placeholder="Nombre del barrio"
+                                   class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="nivelEducativo">Nivel Educativo Alcanzado</label>
+                            <select id="nivelEducativo" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                                <option value="">Seleccionar...</option>
+                                <option value="Sin instrucción">Sin instrucción</option>
+                                <option value="Primario incompleto">Primario incompleto</option>
+                                <option value="Primario completo">Primario completo</option>
+                                <option value="Secundario incompleto">Secundario incompleto</option>
+                                <option value="Secundario completo">Secundario completo</option>
+                                <option value="Terciario o Universitario incompleto">Terciario o Universitario incompleto</option>
+                                <option value="Terciario o Universitario completo y más">Terciario o Universitario completo y más</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="situacionLaboral">Situación Laboral Actual</label>
+                            <select id="situacionLaboral" class="mt-1 block w-full px-3 py-2 border rounded-md">
+                                <option value="">Seleccionar...</option>
+                                <option value="Trabajo a tiempo completo (mínimo 40 hs semanales)">Trabajo a tiempo completo (mínimo 40 hs semanales)</option>
+                                <option value="Trabajo a tiempo parcial (menos de 40 hs semanales)">Trabajo a tiempo parcial (menos de 40 hs semanales)</option>
+                                <option value="No trabajo, pero busco trabajo">No trabajo, pero busco trabajo</option>
+                                <option value="No trabajo y no busco trabajo">No trabajo y no busco trabajo</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOQUE 2: PATRONES DE CONSUMO Y SUSTANCIAS -->
+                <div class="bg-slate-50 p-5 rounded-lg border border-slate-200 space-y-4">
+                    <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-2">
+                        2. Patrones de Consumo y Sustancias
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="sustanciaConsumida">Sustancia Principal *</label>
+                            <select id="sustanciaConsumida" required class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="Alcohol">Alcohol</option>
+                                <option value="Tabaco">Tabaco</option>
+                                <option value="Marihuana">Marihuana</option>
+                                <option value="Cocaína">Cocaína</option>
+                                <option value="Pasta Base / Paco">Pasta Base / Paco</option>
+                                <option value="Psicofármacos con receta">Psicofármacos con receta</option>
+                                <option value="Psicofármacos sin receta">Psicofármacos sin receta</option>
+                                <option value="Alucinógenos">Alucinógenos</option>
+                                <option value="Otras">Otras</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="viaAdministracion">Vía de Administración</label>
+                            <select id="viaAdministracion" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="Oral / Ingerida">Oral / Ingerida</option>
+                                <option value="Fumada / Inhalada">Fumada / Inhalada</option>
+                                <option value="Aspirada / Esnifada">Aspirada / Esnifada</option>
+                                <option value="Inyectable">Inyectable</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="edadInicio">Edad de Inicio</label>
+                            <input type="number" id="edadInicio" min="0" max="120" placeholder="Años al iniciar"
+                                   class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="frecuenciaUso">Frecuencia de Uso</label>
+                            <select id="frecuenciaUso" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="A diario o casi a diario">A diario o casi a diario</option>
+                                <option value="Semanalmente">Semanalmente</option>
+                                <option value="Mensualmente">Mensualmente</option>
+                                <option value="Sí, durante el último mes">Sí, durante el último mes</option>
+                                <option value="Alguna vez en la vida">Alguna vez en la vida</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="policonsumo">Policonsumo Simultáneo</label>
+                            <select id="policonsumo" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="SI">SI</option>
+                                <option value="NO">NO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="sustanciasSecundarias">Sustancias Secundarias</label>
+                            <input type="text" id="sustanciasSecundarias" placeholder="Ej. Alcohol + Psicofármacos"
+                                   class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOQUE 3: CONTEXTO, MOTIVOS Y PRÁCTICAS DE CUIDADO -->
+                <div class="bg-blue-50/40 p-5 rounded-lg border border-blue-200 space-y-4">
+                    <h4 class="text-sm font-bold text-blue-900 uppercase tracking-wide border-b border-blue-200 pb-2">
+                        3. Contexto, Motivos y Prácticas de Cuidado
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="lugarConsumo">Lugar Habitual de Consumo</label>
+                            <select id="lugarConsumo" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="Domicilio particular (propio o de terceros)">Domicilio particular (propio o de terceros)</option>
+                                <option value="Vía pública (calles, plazas, parques)">Vía pública (calles, plazas, parques)</option>
+                                <option value="Lugares de ocio, o eventos (boliches, bares, recitales)">Lugares de ocio, o eventos</option>
+                                <option value="Lugar de trabajo">Lugar de trabajo</option>
+                                <option value="Lugares deshabitados / construcciones">Lugares deshabitados / construcciones</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="redAcompanamiento">Red de Acompañamiento / Entorno</label>
+                            <select id="redAcompanamiento" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="Solo / En soledad">Solo / En soledad</option>
+                                <option value="Amigos / Pares">Amigos / Pares</option>
+                                <option value="Pareja">Pareja</option>
+                                <option value="Familia">Familia</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="motivos">Motivo / Detonante Principal</label>
+                            <select id="motivos" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="Afrontamiento de Estrés / Angustia">Afrontamiento de Estrés / Angustia</option>
+                                <option value="Manejo del Dolor Fisico">Manejo del Dolor Físico</option>
+                                <option value="Búsqueda de Placer / Recreativo">Búsqueda de Placer / Recreativo</option>
+                                <option value="Exigencia Laboral / Rendimiento">Exigencia Laboral / Rendimiento</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="pautasAutocuidado">Aplicación de Pautas de Autocuidado</label>
+                            <select id="pautasAutocuidado" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="Aplica hidratación y regulación de dosis">Aplica hidratación y regulación de dosis</option>
+                                <option value="Evita mezclas de riesgo">Evita mezclas de riesgo</option>
+                                <option value="Ninguna pauta de cuidado">Ninguna pauta de cuidado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOQUE 4: ASISTENCIA, SALUD MENTAL Y RED TERRITORIAL -->
+                <div class="bg-purple-50/40 p-5 rounded-lg border border-purple-200 space-y-4">
+                    <h4 class="text-sm font-bold text-purple-900 uppercase tracking-wide border-b border-purple-200 pb-2">
+                        4. Asistencia, Salud Mental y Red Territorial
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="consultasPrevias">Tratamientos Previos</label>
+                            <select id="consultasPrevias" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="SI">SI</option>
+                                <option value="NO">NO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="atencionGuardia">Atención Previa en Guardia</label>
+                            <select id="atencionGuardia" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="SI">SI</option>
+                                <option value="NO">NO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="atencionSaludMental">Atención Salud Mental</label>
+                            <select id="atencionSaludMental" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="SI">SI</option>
+                                <option value="NO">NO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="internaciones">Internaciones Previas</label>
+                            <select id="internaciones" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="SI">SI</option>
+                                <option value="NO">NO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 border-t border-purple-100 pt-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="vinculacionRed">Vinculación a Red / Programa Social</label>
+                            <input type="text" id="vinculacionRed" maxlength="200" placeholder="Ej. Becas Cuidándonos, CAAC, Potenciar"
+                                   class="mt-1 block w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="motivoConsulta">Motivo de Consulta Asistencial *</label>
+                            <textarea id="motivoConsulta" rows="2" required maxlength="1000"
+                                      placeholder="Describa la demanda o motivo de consulta..."
+                                      class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700" for="observaciones">Observaciones / Impresión Diagnóstica</label>
+                            <textarea id="observaciones" rows="3" maxlength="2000"
+                                      placeholder="Observaciones clínicas y epidemiológicas adicionales..."
+                                      class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full bg-sky-600 text-white py-3 rounded-md hover:bg-sky-700 font-bold text-lg transition">
+                    Guardar Historia Clínica Completa
+                </button>
+            </form>
+            <p id="clinicalStatus" class="text-sm mt-3 text-center hidden" role="status"></p>
+        </div>
+    </div>
+
+    <!-- MODAL: EXPORTAR FICHA INDIVIDUAL -->
+    <div id="modalExportarFicha" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" id="modalExportarBackdrop"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md border border-slate-200 p-6 space-y-4 z-10">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900">Exportar ficha clínica</h3>
+                <p class="text-xs text-slate-500 mt-1">Por trazabilidad legal debe confirmar su identidad y el motivo de la exportación.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="exportMotivo">Motivo de la exportación *</label>
+                <select id="exportMotivo" class="mt-1 w-full text-sm p-2.5 border border-slate-300 rounded-lg bg-white">
+                    <option value="">Seleccionar motivo...</option>
+                    <option value="Solicitud directa del paciente">Solicitud directa del paciente</option>
+                    <option value="Transferencia a otro profesional">Transferencia a otro profesional</option>
+                    <option value="Requerimiento judicial">Requerimiento judicial</option>
+                    <option value="Continuidad de tratamiento">Continuidad de tratamiento</option>
+                    <option value="Auditoría institucional">Auditoría institucional</option>
+                    <option value="Otro">Otro (detallar abajo)</option>
+                </select>
+            </div>
+            <div id="exportMotivoOtroWrap" class="hidden">
+                <label class="block text-sm font-medium text-gray-700" for="exportMotivoOtro">Detalle del motivo *</label>
+                <textarea id="exportMotivoOtro" rows="2" maxlength="300" placeholder="Describa el motivo..."
+                          class="mt-1 w-full text-sm p-2.5 border border-slate-300 rounded-lg"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700" for="exportPassword">Confirme su contraseña *</label>
+                <input type="password" id="exportPassword" autocomplete="current-password"
+                       class="mt-1 w-full text-sm p-2.5 border border-slate-300 rounded-lg"
+                       placeholder="Reingrese su contraseña">
+            </div>
+            <p id="exportModalError" class="text-sm text-red-500 hidden" role="alert"></p>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" id="btnCancelarExportModal"
+                        class="text-sm px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+                    Cancelar
+                </button>
+                <button type="button" id="btnConfirmarExportModal"
+                        class="text-sm px-4 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700">
+                    Confirmar y exportar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.ENV = window.ENV || {
+            SUPABASE_URL: 'https://hgibtilxeypuvpraziac.supabase.co',
+            SUPABASE_ANON_KEY: 'sb_publishable_yZ6dortEAFQ5ZwZUwwPhGg_i-OcYDqD'
+        };
+    </script>
+    <script src="app.js" defer></script>
+</body>
+</html>
