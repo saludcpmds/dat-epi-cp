@@ -617,8 +617,170 @@
           </div>
         </div>
 
-        <!-- BLOQUE 2, 3 y 4 (Patrones de Consumo, Contexto, Asistencia) -->
-        <!-- (Se mantienen idénticos a la versión anterior que ya tenías funcionando) -->
+        <!-- BLOQUE 2: PATRONES DE CONSUMO -->
+<div class="bg-slate-50 p-5 rounded-lg border border-slate-200 space-y-4">
+  <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-2">2. Patrones de Consumo y Sustancias</h4>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="sustanciaConsumida">Sustancia Principal *</label>
+      <select id="sustanciaConsumida" required class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="Alcohol">Alcohol</option>
+        <option value="Tabaco">Tabaco</option>
+        <option value="Marihuana">Marihuana</option>
+        <option value="Cocaína">Cocaína</option>
+        <option value="Pasta Base / Paco">Pasta Base / Paco</option>
+        <option value="Psicofármacos con receta">Psicofármacos con receta</option>
+        <option value="Psicofármacos sin receta">Psicofármacos sin receta</option>
+        <option value="Alucinógenos">Alucinógenos</option>
+        <option value="Otras">Otras</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="viaAdministracion">Vía de Administración</label>
+      <select id="viaAdministracion" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="Oral / Ingerida">Oral / Ingerida</option>
+        <option value="Fumada / Inhalada">Fumada / Inhalada</option>
+        <option value="Aspirada / Esnifada">Aspirada / Esnifada</option>
+        <option value="Inyectable">Inyectable</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="edadInicio">Edad de Inicio</label>
+      <input type="number" id="edadInicio" min="0" max="120" placeholder="Años al iniciar" class="mt-1 block w-full px-3 py-2 border rounded-md">
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="fechaInicioConsumo">Fecha aproximada de inicio</label>
+      <input type="date" id="fechaInicioConsumo" class="mt-1 block w-full px-3 py-2 border rounded-md">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="frecuenciaUso">Frecuencia de Uso</label>
+      <select id="frecuenciaUso" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="A diario o casi a diario">A diario o casi a diario</option>
+        <option value="Semanalmente">Semanalmente</option>
+        <option value="Mensualmente">Mensualmente</option>
+        <option value="Sí, durante el último mes">Sí, durante el último mes</option>
+        <option value="Alguna vez en la vida">Alguna vez en la vida</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="policonsumo">Policonsumo Simultáneo</label>
+      <select id="policonsumo" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="SI">SI</option>
+        <option value="NO">NO</option>
+      </select>
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700" for="sustanciasSecundarias">Sustancias Secundarias</label>
+    <input type="text" id="sustanciasSecundarias" placeholder="Ej. Alcohol + Psicofármacos sin receta" class="mt-1 block w-full px-3 py-2 border rounded-md">
+  </div>
+</div>
+        <!-- BLOQUE 3: CONTEXTO -->
+<div class="bg-blue-50/40 p-5 rounded-lg border border-blue-200 space-y-4">
+  <h4 class="text-sm font-bold text-blue-900 uppercase tracking-wide border-b border-blue-200 pb-2">3. Contexto, Motivos y Prácticas de Cuidado</h4>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="lugarConsumo">Lugar Habitual de Consumo</label>
+      <select id="lugarConsumo" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="Domicilio particular (propio o de terceros)">Domicilio particular</option>
+        <option value="Vía pública (calles, plazas, parques)">Vía pública</option>
+        <option value="Lugares de ocio, o eventos (boliches, bares, recitales)">Lugares de ocio / eventos</option>
+        <option value="Lugar de trabajo">Lugar de trabajo</option>
+        <option value="Lugares deshabitados / construcciones">Lugares deshabitados</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="redAcompanamiento">Red de Acompañamiento</label>
+      <select id="redAcompanamiento" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="Solo / En soledad">Solo / En soledad</option>
+        <option value="Amigos / Pares">Amigos / Pares</option>
+        <option value="Pareja">Pareja</option>
+        <option value="Familia">Familia</option>
+      </select>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="motivos">Motivo / Detonante Principal</label>
+      <select id="motivos" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="Afrontamiento de Estrés / Angustia">Afrontamiento de Estrés / Angustia</option>
+        <option value="Manejo del Dolor Fisico">Manejo del Dolor Físico</option>
+        <option value="Búsqueda de Placer / Recreativo">Búsqueda de Placer / Recreativo</option>
+        <option value="Exigencia Laboral / Rendimiento">Exigencia Laboral / Rendimiento</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="pautasAutocuidado">Pautas de Autocuidado</label>
+      <select id="pautasAutocuidado" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="Aplica hidratación y regulación de dosis">Aplica hidratación y regulación de dosis</option>
+        <option value="Evita mezclas de riesgo">Evita mezclas de riesgo</option>
+        <option value="Ninguna pauta de cuidado">Ninguna pauta de cuidado</option>
+      </select>
+    </div>
+  </div>
+</div>
+        <!-- BLOQUE 4: ASISTENCIA -->
+<div class="bg-purple-50/40 p-5 rounded-lg border border-purple-200 space-y-4">
+  <h4 class="text-sm font-bold text-purple-900 uppercase tracking-wide border-b border-purple-200 pb-2">4. Asistencia, Salud Mental y Red Territorial</h4>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="consultasPrevias">Tratamientos Previos</label>
+      <select id="consultasPrevias" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="SI">SI</option>
+        <option value="NO">NO</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="atencionGuardia">Atención Previa en Guardia</label>
+      <select id="atencionGuardia" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="SI">SI</option>
+        <option value="NO">NO</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="atencionSaludMental">Atención Salud Mental</label>
+      <select id="atencionSaludMental" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="SI">SI</option>
+        <option value="NO">NO</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="internaciones">Internaciones Previas</label>
+      <select id="internaciones" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+        <option value="">Seleccionar...</option>
+        <option value="SI">SI</option>
+        <option value="NO">NO</option>
+      </select>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 gap-4 border-t border-purple-100 pt-3">
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="vinculacionRed">Vinculación a Red / Programa Social</label>
+      <input type="text" id="vinculacionRed" maxlength="200" placeholder="Ej. Becas Cuidándonos, CAAC, Potenciar" class="mt-1 block w-full px-3 py-2 border rounded-md">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="motivoConsulta">Motivo de Consulta Asistencial *</label>
+      <textarea id="motivoConsulta" rows="2" required maxlength="1000" placeholder="Describa la demanda o motivo de consulta..." class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700" for="observaciones">Observaciones / Impresión Diagnóstica</label>
+      <textarea id="observaciones" rows="3" maxlength="2000" placeholder="Observaciones clínicas y epidemiológicas adicionales..." class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
+    </div>
+  </div>
+</div>
 
         <!-- AVISO DE CONFIDENCIALIDAD -->
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-900">
