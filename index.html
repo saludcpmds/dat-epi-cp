@@ -21,6 +21,7 @@
     #resultadoBusqueda table,
     #tablaPacientesBody,
     #tablaPacientesBody td,
+    #resultadoCardsMobile,
     #detalleFichaPaciente,
     #timelineContenedor {
       -webkit-user-select: none;
@@ -41,8 +42,8 @@
         font-size: 0.7rem;
       }
       main.dashboard-main {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
       }
       .hero-dashboard {
         padding: 1.25rem !important;
@@ -61,6 +62,7 @@
       #detalleFichaPaciente {
         margin-left: 0 !important;
         margin-right: 0 !important;
+        padding: 1rem !important;
       }
     }
   </style>
@@ -120,12 +122,12 @@
       </div>
     </header>
 
-    <main class="dashboard-main mx-auto max-w-7xl px-4 sm:px-6 space-y-4 sm:space-y-6">
-      <section class="hero-dashboard relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-sky-50/80 via-white to-sky-50/50 p-8 shadow-sm">
+    <main class="dashboard-main mx-auto max-w-7xl px-3 sm:px-6 space-y-4 sm:space-y-6">
+      <section class="hero-dashboard relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-sky-50/80 via-white to-sky-50/50 p-6 sm:p-8 shadow-sm">
         <div class="flex flex-wrap items-end justify-between gap-6">
           <div>
             <p class="font-mono text-xs uppercase tracking-widest text-sky-700 font-semibold">REGISTRO ÚNICO POR DNI Y SALA DE SITUACIÓN</p>
-            <h1 class="mt-2 font-bold text-4xl lg:text-5xl tracking-tight text-slate-900">Historias Clínicas</h1>
+            <h1 class="mt-2 font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight text-slate-900">Historias Clínicas</h1>
             <p class="mt-2 text-sm text-slate-600 max-w-xl">Sistema epidemiológico de asistencia y seguimiento de consumos problemáticos.</p>
           </div>
           <div class="text-right">
@@ -203,14 +205,16 @@
       </section>
 
       <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div class="flex items-center justify-between border-b border-slate-100 px-4 sm:px-6 py-4">
           <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wide">Resultados de la búsqueda</h2>
           <span id="contadorResultados" class="font-mono text-xs text-slate-500">0 fichas</span>
         </div>
         <div id="resultadoBusqueda">
-          <div id="resultadoCardsMobile" class="sm:hidden space-y-3 p-4">
+          <!-- Vista Móvil: Tarjetas -->
+          <div id="resultadoCardsMobile" class="sm:hidden space-y-3 p-3">
             <p class="text-center text-xs text-slate-400 py-6">Ingrese un DNI o nombre y presione Buscar.</p>
           </div>
+          <!-- Vista Escritorio: Tabla -->
           <div class="hidden sm:block tabla-scroll">
             <table class="w-full text-sm text-left min-w-[560px]">
               <thead class="bg-slate-50 text-xs font-mono uppercase text-slate-500 border-b border-slate-100">
@@ -232,33 +236,33 @@
         </div>
       </section>
 
-      <section id="detalleFichaPaciente" class="hidden bg-slate-50/50 rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
-        <div class="flex items-center justify-between">
+      <section id="detalleFichaPaciente" class="hidden bg-slate-50/50 rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-2">
           <div>
             <p id="fichaDniHeader" class="font-mono text-xs font-bold text-slate-400 uppercase tracking-wider">FICHA - DNI ...</p>
-            <h2 id="fichaNombreHeader" class="text-2xl font-bold text-slate-900 mt-0.5">...</h2>
+            <h2 id="fichaNombreHeader" class="text-xl sm:text-2xl font-bold text-slate-900 mt-0.5">...</h2>
           </div>
           <div id="fichaEstadoBadge"></div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
-            <span id="cantIngresosFicha" class="text-3xl font-extrabold text-slate-900 block">0</span>
+            <span id="cantIngresosFicha" class="text-2xl sm:text-3xl font-extrabold text-slate-900 block">0</span>
             <span class="text-xs text-slate-500 font-medium">Ingresos</span>
           </div>
           <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
-            <span id="cantEvolucionesFicha" class="text-3xl font-extrabold text-slate-900 block">0</span>
+            <span id="cantEvolucionesFicha" class="text-2xl sm:text-3xl font-extrabold text-slate-900 block">0</span>
             <span class="text-xs text-slate-500 font-medium">Evoluciones</span>
           </div>
           <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
-            <span id="cantDiasFicha" class="text-3xl font-extrabold text-slate-900 block">0</span>
+            <span id="cantDiasFicha" class="text-2xl sm:text-3xl font-extrabold text-slate-900 block">0</span>
             <span class="text-xs text-slate-500 font-medium">Días</span>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-          <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-            <h3 class="font-bold text-slate-800 text-base">Historial de ingresos y evoluciones</h3>
+        <div class="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-4 flex-wrap gap-2">
+            <h3 class="font-bold text-slate-800 text-sm sm:text-base">Historial de ingresos y evoluciones</h3>
             <div class="flex items-center gap-2">
               <button id="btnNuevaEntrada" type="button" class="text-sky-600 hover:text-sky-700 text-xs font-bold uppercase tracking-wider transition">+ Nueva entrada</button>
             </div>
@@ -295,7 +299,7 @@
             </div>
           </div>
 
-          <div id="timelineContenedor" class="relative border-l-2 border-sky-100 pl-6 space-y-6 ml-2"></div>
+          <div id="timelineContenedor" class="relative border-l-2 border-sky-100 pl-4 sm:pl-6 space-y-6 ml-1 sm:ml-2"></div>
 
           <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
             <select id="cambioEstadoRapido" class="w-full sm:w-64 text-sm font-semibold p-2.5 rounded-xl border border-slate-300 bg-white">
@@ -313,12 +317,12 @@
   </div>
 
   <!-- FORMULARIO -->
-  <div id="formularioSection" class="hidden min-h-screen py-8 px-4 flex justify-center">
-    <div class="form-card bg-white p-8 rounded-xl shadow-lg w-full max-w-5xl border-t-4 border-sky-600 space-y-8">
-      <div class="flex justify-between items-center">
+  <div id="formularioSection" class="hidden min-h-screen py-8 px-3 sm:px-4 flex justify-center">
+    <div class="form-card bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-5xl border-t-4 border-sky-600 space-y-8">
+      <div class="flex justify-between items-center flex-wrap gap-2">
         <div>
-          <h2 class="text-2xl font-bold text-slate-900">Historia Clínica Epidemiológica</h2>
-          <p class="text-sm text-slate-500">Registro único para Sala de Situación – MDS Corrientes</p>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Historia Clínica Epidemiológica</h2>
+          <p class="text-xs sm:text-sm text-slate-500">Registro único para Sala de Situación – MDS Corrientes</p>
         </div>
         <button id="btnVolverDashboard" type="button" class="text-sm text-sky-700 font-semibold hover:underline">← Volver</button>
       </div>
@@ -326,7 +330,7 @@
       <form id="clinicalForm" class="space-y-8">
 
         <!-- BLOQUE 0: TRIAJE -->
-        <div class="bg-rose-50/50 p-5 rounded-lg border border-rose-200 space-y-4">
+        <div class="bg-rose-50/50 p-4 sm:p-5 rounded-lg border border-rose-200 space-y-4">
           <h4 class="text-sm font-bold text-rose-900 uppercase tracking-wide border-b border-rose-200 pb-2">0. Triaje ICAP / Criterios de Admisión</h4>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -360,7 +364,7 @@
         </div>
 
         <!-- BLOQUE 1: IDENTIFICACIÓN + DIRECCIÓN + GEO -->
-        <div class="bg-slate-50 p-5 rounded-lg border border-slate-200 space-y-4">
+        <div class="bg-slate-50 p-4 sm:p-5 rounded-lg border border-slate-200 space-y-4">
           <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-2">1. Identificación y Sociodemografía</h4>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -683,7 +687,7 @@
         </div>
 
         <!-- BLOQUE 2: PATRONES DE CONSUMO -->
-        <div class="bg-slate-50 p-5 rounded-lg border border-slate-200 space-y-4">
+        <div class="bg-slate-50 p-4 sm:p-5 rounded-lg border border-slate-200 space-y-4">
           <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-2">2. Patrones de Consumo y Sustancias</h4>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -748,7 +752,7 @@
         </div>
 
         <!-- BLOQUE 3: CONTEXTO -->
-        <div class="bg-blue-50/40 p-5 rounded-lg border border-blue-200 space-y-4">
+        <div class="bg-blue-50/40 p-4 sm:p-5 rounded-lg border border-blue-200 space-y-4">
           <h4 class="text-sm font-bold text-blue-900 uppercase tracking-wide border-b border-blue-200 pb-2">3. Contexto, Motivos y Prácticas de Cuidado</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -797,7 +801,7 @@
         </div>
 
         <!-- BLOQUE 4: ASISTENCIA -->
-        <div class="bg-purple-50/40 p-5 rounded-lg border border-purple-200 space-y-4">
+        <div class="bg-purple-50/40 p-4 sm:p-5 rounded-lg border border-purple-200 space-y-4">
           <h4 class="text-sm font-bold text-purple-900 uppercase tracking-wide border-b border-purple-200 pb-2">4. Asistencia, Salud Mental y Red Territorial</h4>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
