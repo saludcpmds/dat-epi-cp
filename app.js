@@ -743,6 +743,10 @@ async function confirmarExportarFicha() {
     { Campo: 'Estado Paciente', Valor: sanitizarValorExcel(p.estado_paciente) },
     { Campo: 'Localidad', Valor: sanitizarValorExcel(p.localidad) },
     { Campo: 'Barrio', Valor: sanitizarValorExcel(p.barrio_residencia) },
+    { Campo: 'Habitaciones p/Dormir', Valor: sanitizarValorExcel(p.habitaciones_dormir) },
+    { Campo: 'Personas en Vivienda', Valor: sanitizarValorExcel(p.personas_vivienda) },
+    { Campo: 'Servicio Básico de Agua', Valor: sanitizarValorExcel(p.servicio_agua) },
+    { Campo: 'Eliminación de Excretas', Valor: sanitizarValorExcel(p.eliminacion_excretas) },
     { Campo: 'Latitud', Valor: sanitizarValorExcel(p.latitud) },
     { Campo: 'Longitud', Valor: sanitizarValorExcel(p.longitud) }
   ];
@@ -836,6 +840,10 @@ function cargarFichaParaEditar() {
   setVal('departamentoPartido', p.departamento_partido);
   setVal('provincia', p.provincia || 'Corrientes');
   setVal('situacionHabitacional', p.situacion_habitacional);
+  setVal('habitacionesDormir', p.habitaciones_dormir);
+  setVal('personasVivienda', p.personas_vivienda);
+  setVal('servicioAgua', p.servicio_agua);
+  setVal('eliminacionExcretas', p.eliminacion_excretas);
   setVal('nivelEducativo', p.nivel_educativo);
   setVal('situacionLaboral', p.situacion_laboral);
   setVal('coberturaSalud', p.cobertura_salud);
@@ -901,6 +909,10 @@ async function guardarHistoriaClinica(e) {
     departamento_partido: getVal('departamentoPartido'),
     provincia: getVal('provincia') || 'Corrientes',
     situacion_habitacional: getVal('situacionHabitacional'),
+    habitaciones_dormir: getVal('habitacionesDormir') ? parseInt(getVal('habitacionesDormir'), 10) : null,
+    personas_vivienda: getVal('personasVivienda') ? parseInt(getVal('personasVivienda'), 10) : null,
+    servicio_agua: getVal('servicioAgua'),
+    eliminacion_excretas: getVal('eliminacionExcretas'),
     nivel_educativo: getVal('nivelEducativo'),
     situacion_laboral: getVal('situacionLaboral'),
     cobertura_salud: getVal('coberturaSalud'),
