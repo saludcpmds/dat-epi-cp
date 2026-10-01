@@ -1,7 +1,7 @@
 /**
  * Ficha Clínica y Sala de Situación Epidemiológica
  * Dirección de Asistencia y Tratamiento (MDS Corrientes)
- * Versión con tabla separada de evoluciones + geolocalización + campos epidemiológicos
+ * Versión optimizada para respuesta táctil y pantallas móviles
  */
 
 const SUPABASE_URL = window.ENV?.SUPABASE_URL;
@@ -248,7 +248,6 @@ async function obtenerUbicacion() {
 
       if (status) status.textContent = `Ubicación capturada ✓ (${lat.toFixed(5)}, ${lon.toFixed(5)})`;
 
-      // Geocodificación inversa (Nominatim)
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
@@ -373,15 +372,10 @@ async function cargarMetricasGlobales() {
     if (resEpi.data && total > 0) {
       const registros = resEpi.data;
       
-      // Prevalencia Policonsumo
       const cantPoli = registros.filter(r => r.policonsumo === 'SI').length;
-      
-      // Ingresos por Urgencia/Guardia calculados según el Triaje de Admisión (Bloque 0)
       const cantGuardia = registros.filter(r => 
         r.triaje_nivel === 'Urgencia (Guardia)' || r.triaje_nivel === 'Urgencia / Guardia General'
       ).length;
-      
-      // Atención Ambulatoria (ICAP) según el Triaje de Admisión (Bloque 0)
       const cantIcap = registros.filter(r => r.triaje_nivel === 'Atencion Ambulatoria (ICAP)').length;
 
       actualizarTexto('statPoliconsumo', `${Math.round((cantPoli / total) * 100)}%`);
@@ -397,6 +391,7 @@ async function cargarMetricasGlobales() {
 async function ejecutarBusqueda() {
   const input = document.getElementById('buscarDNI');
   const tbody = document.getElementById('tablaPacientesBody');
+  const cards = document.getElementById('resultadoCardsMobile');
   const contador = document.getElementById('contadorResultados');
   const raw = (input?.value || '').trim();
   const query = raw.replace(/[%_]/g, '').slice(0, 100);
@@ -407,15 +402,12 @@ async function ejecutarBusqueda() {
     return;
   }
 
+  const msgCargando = 'Buscando registros...';
   if (tbody) {
-    tbody.innerHTML = '';
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 5;
-    td.className = 'px-6 py-8 text-center text-xs text-slate-400';
-    td.textContent = 'Buscando registros...';
-    tr.appendChild(td);
-    tbody.appendChild(tr);
+    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-xs text-slate-400">${msgCargando}</td></tr>`;
+  }
+  if (cards) {
+    cards.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">${msgCargando}</p>`;
   }
 
   try {
@@ -439,17 +431,18 @@ async function ejecutarBusqueda() {
 
     if (contador) contador.textContent = `${pacientesUnicos.length} resultados`;
     renderTablaSegura(pacientesUnicos);
+
+    // Auto-scroll a la sección de resultados en dispositivos móviles
+    document.getElementById('resultadoBusqueda')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   } catch (err) {
     console.error('[BusquedaError]', err);
+    const msgErr = 'Error al buscar historias clínicas.';
     if (tbody) {
-      tbody.innerHTML = '';
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 5;
-      td.className = 'px-6 py-4 text-center text-xs text-red-500';
-      td.textContent = 'Error al buscar historias clínicas.';
-      tr.appendChild(td);
-      tbody.appendChild(tr);
+      tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-xs text-red-500">${msgErr}</td></tr>`;
+    }
+    if (cards) {
+      cards.innerHTML = `<p class="text-center text-xs text-red-500 py-4">${msgErr}</p>`;
     }
   }
 }
@@ -461,25 +454,26 @@ function renderTablaSegura(registros) {
   if (cards) cards.innerHTML = '';
 
   if (!registros || registros.length === 0) {
+    const msgVacio = 'No se encontraron fichas clínicas asociadas.';
     if (tbody) {
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 5;
-      td.className = 'px-6 py-8 text-center text-xs text-amber-600';
-      td.textContent = 'No se encontraron fichas clínicas asociadas.';
-      tr.appendChild(td);
-      tbody.appendChild(tr);
+      tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-xs text-amber-600">${msgVacio}</td></tr>`;
+    }
+    if (cards) {
+      cards.innerHTML = `<p class="text-center text-xs text-amber-600 py-6">${msgVacio}</p>`;
     }
     return;
   }
 
-  const fragment = document.createDocumentFragment();
+  const fragmentTbody = document.createDocumentFragment();
+  const fragmentCards = document.createDocumentFragment();
+
   registros.forEach(item => {
     const fecha = item.created_at ? new Date(item.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/I';
     const nombre = `${item.paciente_nombre || ''} ${item.paciente_apellido || ''}`.trim();
     const dni = item.paciente_dni || 'N/R';
     const tipoDoc = item.tipo_documento ? `${item.tipo_documento} ` : '';
 
+    // 1. Render para Tabla (Pantallas medianas y grandes)
     if (tbody) {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
@@ -510,10 +504,50 @@ function renderTablaSegura(registros) {
       tdAccion.appendChild(btnVer);
 
       tr.append(tdDni, tdNombre, tdFecha, tdEstado, tdAccion);
-      fragment.appendChild(tr);
+      fragmentTbody.appendChild(tr);
+    }
+
+    // 2. Render para Tarjetas Móviles (Smartphones)
+    if (cards) {
+      const card = document.createElement('div');
+      card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3';
+
+      const topRow = document.createElement('div');
+      topRow.className = 'flex items-center justify-between border-b border-slate-100 pb-2';
+
+      const dniSpan = document.createElement('span');
+      dniSpan.className = 'font-mono font-bold text-sm text-slate-900';
+      dniSpan.textContent = `${tipoDoc}${dni}`;
+
+      topRow.appendChild(dniSpan);
+      topRow.appendChild(crearBadgeEstado(item.estado_paciente));
+
+      const bodyDiv = document.createElement('div');
+      bodyDiv.className = 'space-y-1';
+
+      const nombreP = document.createElement('p');
+      nombreP.className = 'font-bold text-slate-800 text-base';
+      nombreP.textContent = nombre || 'Sin nombre registrado';
+
+      const fechaP = document.createElement('p');
+      fechaP.className = 'text-xs font-mono text-slate-400';
+      fechaP.textContent = `Fecha de alta: ${fecha}`;
+
+      bodyDiv.append(nombreP, fechaP);
+
+      const btnVerMobile = document.createElement('button');
+      btnVerMobile.type = 'button';
+      btnVerMobile.className = 'w-full text-center py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-lg shadow-sm transition active:scale-[0.98]';
+      btnVerMobile.textContent = 'Ver Historial Completo';
+      btnVerMobile.addEventListener('click', () => verFichaPaciente(item.id));
+
+      card.append(topRow, bodyDiv, btnVerMobile);
+      fragmentCards.appendChild(card);
     }
   });
-  if (tbody) tbody.appendChild(fragment);
+
+  if (tbody) tbody.appendChild(fragmentTbody);
+  if (cards) cards.appendChild(fragmentCards);
 }
 
 function crearBadgeEstado(estado) {
@@ -567,7 +601,7 @@ async function verFichaPaciente(id) {
     const detalle = document.getElementById('detalleFichaPaciente');
     if (detalle) {
       detalle.classList.remove('hidden');
-      detalle.scrollIntoView({ behavior: 'smooth' });
+      detalle.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   } catch (err) {
     alert(err.message || 'Error al cargar la ficha.');
