@@ -577,6 +577,36 @@
               </div>
             </div>
 
+            <!-- NUEVOS CAMPOS SOCIOHABITACIONALES INTEGRADOS -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700" for="habitacionesDormir">Habitaciones p/Dormir</label>
+                <input type="number" id="habitacionesDormir" min="0" max="20" placeholder="Uso exclusivo" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700" for="personasVivienda">Personas en la Vivienda</label>
+                <input type="number" id="personasVivienda" min="1" max="50" placeholder="Total personas" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700" for="servicioAgua">Servicio Básico de Agua</label>
+                <select id="servicioAgua" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                  <option value="">Seleccionar...</option>
+                  <option value="Red pública">Red pública</option>
+                  <option value="Pozo/perforación con bomba">Pozo/perforación con bomba</option>
+                  <option value="Transporte por cisterna/camión">Transporte por cisterna/camión</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700" for="eliminacionExcretas">Eliminación de Excretas</label>
+                <select id="eliminacionExcretas" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+                  <option value="">Seleccionar...</option>
+                  <option value="Red pública (cloaca)">Red pública (cloaca)</option>
+                  <option value="Cámara séptica y pozo ciego">Cámara séptica y pozo ciego</option>
+                  <option value="Pozo ciego sin cámara / Letrina">Pozo ciego sin cámara / Letrina</option>
+                </select>
+              </div>
+            </div>
+
             <!-- GEOLOCALIZACIÓN -->
             <div class="mt-4">
               <label class="block text-sm font-medium text-gray-700">Geolocalización</label>
