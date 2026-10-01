@@ -353,7 +353,7 @@ function limpiarVistaInicial() {
   if (detalle) detalle.classList.add('hidden');
 }
 
-// --- MÉTRICAS ---
+// --- MÉTRICAS Y SALA DE SITUACIÓN ---
 async function cargarMetricasGlobales() {
   try {
     const [resTotal, resTratamiento, resSeguimiento, resEgreso, resEpi] = await Promise.all([
@@ -372,9 +372,18 @@ async function cargarMetricasGlobales() {
 
     if (resEpi.data && total > 0) {
       const registros = resEpi.data;
+      
+      // Prevalencia Policonsumo
       const cantPoli = registros.filter(r => r.policonsumo === 'SI').length;
-      const cantGuardia = registros.filter(r => r.atencion_guardia === 'SI').length;
+      
+      // Ingresos por Urgencia/Guardia calculados según el Triaje de Admisión (Bloque 0)
+      const cantGuardia = registros.filter(r => 
+        r.triaje_nivel === 'Urgencia (Guardia)' || r.triaje_nivel === 'Urgencia / Guardia General'
+      ).length;
+      
+      // Atención Ambulatoria (ICAP) según el Triaje de Admisión (Bloque 0)
       const cantIcap = registros.filter(r => r.triaje_nivel === 'Atencion Ambulatoria (ICAP)').length;
+
       actualizarTexto('statPoliconsumo', `${Math.round((cantPoli / total) * 100)}%`);
       actualizarTexto('statGuardia', `${Math.round((cantGuardia / total) * 100)}%`);
       actualizarTexto('statIcap', `${Math.round((cantIcap / total) * 100)}%`);
