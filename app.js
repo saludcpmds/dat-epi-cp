@@ -1,16 +1,15 @@
 /**
  * Ficha Clínica y Sala de Situación Epidemiológica
  * Dirección de Asistencia y Tratamiento (MDS Corrientes)
+ * Versión con tabla separada de evoluciones + campos epidemiológicos prioritarios
  */
 
-// --- CONFIGURACIÓN ---
 const SUPABASE_URL = window.ENV?.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.ENV?.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(
-    '[Config] Faltan SUPABASE_URL / SUPABASE_ANON_KEY. ' +
-    'Defina window.ENV antes de cargar app.js.'
+    '[Config] Faltan SUPABASE_URL / SUPABASE_ANON_KEY. Defina window.ENV antes de cargar app.js.'
   );
 }
 
@@ -210,6 +209,8 @@ function inicializarEventos() {
     state.pacienteActual = null;
     toggleVisibilidadSecciones({ dashboard: false, formulario: true });
     document.getElementById('clinicalForm')?.reset();
+    const provinciaEl = document.getElementById('provincia');
+    if (provinciaEl) provinciaEl.value = 'Corrientes';
     const status = document.getElementById('clinicalStatus');
     if (status) status.classList.add('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -381,7 +382,6 @@ async function cargarMetricasGlobales() {
     actualizarTexto('cantSeguimiento', resSeguimiento.count ?? 0);
     actualizarTexto('cantEgreso', resEgreso.count ?? 0);
 
-    // Indicadores para Sala de Situación
     if (resEpi.data && total > 0) {
       const registros = resEpi.data;
       const cantPoli = registros.filter(r => r.policonsumo === 'SI').length;
@@ -499,6 +499,7 @@ function renderTablaSegura(registros) {
       : 'N/I';
     const nombre = `${item.paciente_nombre || ''} ${item.paciente_apellido || ''}`.trim();
     const dni = item.paciente_dni || 'N/R';
+    const tipoDoc = item.tipo_documento ? `${item.tipo_documento} ` : '';
 
     if (tbody) {
       const tr = document.createElement('tr');
@@ -506,7 +507,7 @@ function renderTablaSegura(registros) {
 
       const tdDni = document.createElement('td');
       tdDni.className = 'px-4 lg:px-6 py-4 font-mono font-bold text-slate-900';
-      tdDni.textContent = dni;
+      tdDni.textContent = `${tipoDoc}${dni}`;
 
       const tdNombre = document.createElement('td');
       tdNombre.className = 'px-4 lg:px-6 py-4 font-semibold text-slate-800';
@@ -561,7 +562,7 @@ function crearBadgeEstado(estado) {
   return span;
 }
 
-// --- DETALLE DE FICHA ---
+// --- DETALLE DE FICHA (con tabla separada de evoluciones) ---
 async function verFichaPaciente(id) {
   try {
     const { data, error } = await supabaseClient
@@ -574,7 +575,7 @@ async function verFichaPaciente(id) {
 
     state.pacienteActual = data;
 
-    actualizarTexto('fichaDniHeader', `FICHA - DNI ${data.paciente_dni || 'N/R'}`);
+    actualizarTexto('fichaDniHeader', `FICHA - ${data.tipo_documento || 'DOC'} ${data.paciente_dni || 'N/R'}`);
     actualizarTexto(
       'fichaNombreHeader',
       `${data.paciente_nombre || ''} ${data.paciente_apellido || ''}`.trim()
@@ -594,7 +595,7 @@ async function verFichaPaciente(id) {
     const dias = Math.floor((hoy - fechaInicio) / (1000 * 60 * 60 * 24));
     actualizarTexto('cantDiasFicha', dias >= 0 ? dias : 0);
 
-    cargarEvolucionesTimeline(data);
+    await cargarEvolucionesDesdeTabla(data.id);
 
     const detalle = document.getElementById('detalleFichaPaciente');
     if (detalle) {
@@ -606,84 +607,85 @@ async function verFichaPaciente(id) {
   }
 }
 
-function cargarEvolucionesTimeline(paciente) {
-  let entradas = paciente.evoluciones_json;
-
-  if (!Array.isArray(entradas) || entradas.length === 0) {
-    entradas = [
-      {
-        tipo: 'Ingreso',
-        fecha: paciente.created_at,
-        motivo: paciente.motivo_consulta || 'Ingreso inicial registrado en el sistema.',
-        dispositivo: 'Admisión',
-        profesional: 'No registrado en el alta'
-      }
-    ];
-  }
-
-  let totalIngresos = 0;
-  let totalEvoluciones = 0;
-
+async function cargarEvolucionesDesdeTabla(historiaId) {
   const contenedor = document.getElementById('timelineContenedor');
   if (!contenedor) return;
 
-  contenedor.innerHTML = '';
-  const fragment = document.createDocumentFragment();
+  contenedor.innerHTML = '<p class="text-xs text-slate-400">Cargando historial...</p>';
 
-  entradas.forEach((item) => {
-    if (item.tipo === 'Ingreso') totalIngresos++;
-    if (item.tipo === 'Evolución') totalEvoluciones++;
+  try {
+    const { data: entradas, error } = await supabaseClient
+      .from('evoluciones')
+      .select('*')
+      .eq('historia_id', historiaId)
+      .order('fecha', { ascending: true });
 
-    const fechaFormateada = item.fecha
-      ? new Date(item.fecha).toLocaleDateString('es-AR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      : 'N/I';
+    if (error) throw error;
 
-    const entryDiv = document.createElement('div');
-    entryDiv.className = 'relative pl-2';
+    let totalIngresos = 0;
+    let totalEvoluciones = 0;
 
-    const dot = document.createElement('span');
-    dot.className =
-      'absolute -left-[31px] top-1.5 h-3 w-3 rounded-full bg-sky-500 ring-4 ring-white';
+    contenedor.innerHTML = '';
+    const fragment = document.createDocumentFragment();
 
-    const headerDiv = document.createElement('div');
-    headerDiv.className = 'flex items-center gap-2 flex-wrap';
+    (entradas || []).forEach((item) => {
+      if (item.tipo === 'Ingreso') totalIngresos++;
+      if (item.tipo === 'Evolución') totalEvoluciones++;
 
-    const tipoSpan = document.createElement('span');
-    tipoSpan.className = 'font-bold text-xs uppercase tracking-wider text-sky-800';
-    tipoSpan.textContent = item.tipo || 'Entrada';
+      const fechaFormateada = item.fecha
+        ? new Date(item.fecha).toLocaleDateString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'N/I';
 
-    const fechaSpan = document.createElement('span');
-    fechaSpan.className = 'font-mono text-xs text-slate-400';
-    fechaSpan.textContent = `• ${fechaFormateada}`;
+      const entryDiv = document.createElement('div');
+      entryDiv.className = 'relative pl-2';
 
-    const metaSpan = document.createElement('span');
-    metaSpan.className = 'text-xs text-slate-500 font-mono';
-    const disp = item.dispositivo ? ` | Disp: ${item.dispositivo}` : '';
-    const prof = item.profesional ? ` | Usuario: ${item.profesional}` : '';
-    metaSpan.textContent = `${disp}${prof}`;
+      const dot = document.createElement('span');
+      dot.className =
+        'absolute -left-[31px] top-1.5 h-3 w-3 rounded-full bg-sky-500 ring-4 ring-white';
 
-    headerDiv.append(tipoSpan, fechaSpan, metaSpan);
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'flex items-center gap-2 flex-wrap';
 
-    const descP = document.createElement('p');
-    descP.className = 'text-sm text-slate-700 mt-1 font-medium';
-    descP.textContent = item.motivo || 'Sin detalles';
+      const tipoSpan = document.createElement('span');
+      tipoSpan.className = 'font-bold text-xs uppercase tracking-wider text-sky-800';
+      tipoSpan.textContent = item.tipo || 'Entrada';
 
-    entryDiv.append(dot, headerDiv, descP);
-    fragment.appendChild(entryDiv);
-  });
+      const fechaSpan = document.createElement('span');
+      fechaSpan.className = 'font-mono text-xs text-slate-400';
+      fechaSpan.textContent = `• ${fechaFormateada}`;
 
-  actualizarTexto('cantIngresosFicha', totalIngresos);
-  actualizarTexto('cantEvolucionesFicha', totalEvoluciones);
-  contenedor.appendChild(fragment);
+      const metaSpan = document.createElement('span');
+      metaSpan.className = 'text-xs text-slate-500 font-mono';
+      const disp = item.dispositivo ? ` | Disp: ${item.dispositivo}` : '';
+      const prof = item.profesional ? ` | Usuario: ${item.profesional}` : '';
+      metaSpan.textContent = `${disp}${prof}`;
+
+      headerDiv.append(tipoSpan, fechaSpan, metaSpan);
+
+      const descP = document.createElement('p');
+      descP.className = 'text-sm text-slate-700 mt-1 font-medium';
+      descP.textContent = item.motivo || 'Sin detalles';
+
+      entryDiv.append(dot, headerDiv, descP);
+      fragment.appendChild(entryDiv);
+    });
+
+    actualizarTexto('cantIngresosFicha', totalIngresos);
+    actualizarTexto('cantEvolucionesFicha', totalEvoluciones);
+    contenedor.appendChild(fragment);
+  } catch (err) {
+    console.error('[Evoluciones]', err);
+    contenedor.innerHTML = '<p class="text-red-500 text-xs">Error al cargar el historial.</p>';
+  }
 }
 
-// --- EVOLUCIONES ---
+// --- EVOLUCIONES (tabla separada) ---
 async function guardarNuevaEntrada() {
   const motivo = document.getElementById('motivoEntrada')?.value?.trim();
   if (!motivo) {
@@ -694,30 +696,26 @@ async function guardarNuevaEntrada() {
   if (!state.pacienteActual?.id) return;
 
   const nuevaEntrada = {
+    historia_id: state.pacienteActual.id,
     tipo: document.getElementById('tipoEntrada')?.value || 'Evolución',
     fecha: new Date().toISOString(),
     motivo,
     dispositivo:
       document.getElementById('dispositivoEntrada')?.value?.trim() || 'No especificado',
     profesional:
-      document.getElementById('profesionalEntrada')?.value?.trim() || 'No especificado'
+      document.getElementById('profesionalEntrada')?.value?.trim() || 'No especificado',
+    created_by: state.currentUser?.id || null
   };
 
   try {
-    const previas = Array.isArray(state.pacienteActual.evoluciones_json)
-      ? [...state.pacienteActual.evoluciones_json]
-      : [];
-    previas.push(nuevaEntrada);
+    const { error } = await supabaseClient
+      .from('evoluciones')
+      .insert([nuevaEntrada]);
 
-    const { error: updateError } = await supabaseClient
-      .from('historias_clinicas')
-      .update({ evoluciones_json: previas })
-      .eq('id', state.pacienteActual.id);
+    if (error) throw error;
 
-    if (updateError) throw updateError;
-    state.pacienteActual.evoluciones_json = previas;
+    await cargarEvolucionesDesdeTabla(state.pacienteActual.id);
 
-    cargarEvolucionesTimeline(state.pacienteActual);
     resetInput('motivoEntrada');
     resetInput('dispositivoEntrada');
     resetInput('profesionalEntrada');
@@ -745,7 +743,7 @@ async function actualizarEstadoRapido(e) {
   }
 }
 
-// --- EXPORTACIÓN E HISTORIA CLÍNICA ---
+// --- EXPORTACIÓN ---
 function sanitizarValorExcel(valor) {
   if (valor == null) return '';
   const str = String(valor);
@@ -770,26 +768,57 @@ function cerrarModalExportarFicha() {
 
 async function confirmarExportarFicha() {
   if (!state.pacienteActual || !state.currentUser) return;
+
+  const motivoSelect = document.getElementById('exportMotivo')?.value;
+  const motivoOtro = document.getElementById('exportMotivoOtro')?.value?.trim();
+  const motivo = motivoSelect === 'Otro' ? (motivoOtro || 'Otro') : motivoSelect;
+
+  if (!motivo) {
+    const errEl = document.getElementById('exportModalError');
+    if (errEl) {
+      errEl.textContent = 'Debe indicar el motivo de la exportación.';
+      errEl.classList.remove('hidden');
+    }
+    return;
+  }
+
   const p = state.pacienteActual;
 
   const datos = [
-    { Campo: 'DNI', Valor: sanitizarValorExcel(p.paciente_dni) },
+    { Campo: 'Tipo Documento', Valor: sanitizarValorExcel(p.tipo_documento) },
+    { Campo: 'Número Documento', Valor: sanitizarValorExcel(p.paciente_dni) },
     { Campo: 'Nombre', Valor: sanitizarValorExcel(p.paciente_nombre) },
     { Campo: 'Apellido', Valor: sanitizarValorExcel(p.paciente_apellido) },
-    { Campo: 'Consentimiento Ético Ley 26.657', Valor: p.consentimiento_informado ? 'SI' : 'NO' },
     { Campo: 'Nivel Triaje (ICAP)', Valor: sanitizarValorExcel(p.triaje_nivel) },
     { Campo: 'Patología Dual', Valor: sanitizarValorExcel(p.patologia_dual) },
     { Campo: 'Sustancia Principal', Valor: sanitizarValorExcel(p.sustancia_consumida) },
     { Campo: 'Vía Administración', Valor: sanitizarValorExcel(p.via_administracion) },
     { Campo: 'Policonsumo', Valor: sanitizarValorExcel(p.policonsumo) },
     { Campo: 'Atención Guardia', Valor: sanitizarValorExcel(p.atencion_guardia) },
-    { Campo: 'Estado Paciente', Valor: sanitizarValorExcel(p.estado_paciente) }
+    { Campo: 'Estado Paciente', Valor: sanitizarValorExcel(p.estado_paciente) },
+    { Campo: 'Localidad', Valor: sanitizarValorExcel(p.localidad) },
+    { Campo: 'Barrio', Valor: sanitizarValorExcel(p.barrio_residencia) },
+    { Campo: 'Situación Habitacional', Valor: sanitizarValorExcel(p.situacion_habitacional) }
   ];
 
   const worksheet = XLSX.utils.json_to_sheet(datos);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Ficha Clínica');
-  XLSX.writeFile(workbook, `Ficha_Epi_${p.paciente_dni}.xlsx`);
+  XLSX.writeFile(workbook, `Ficha_Epi_${p.paciente_dni || 'SIN_DNI'}.xlsx`);
+
+  try {
+    await supabaseClient.from('export_audit_log').insert([{
+      user_id: state.currentUser.id,
+      user_email: state.currentUser.email,
+      user_name: obtenerNombreProfesional(state.currentUser),
+      tipo: 'ficha_individual',
+      paciente_dni: p.paciente_dni,
+      motivo,
+      metadata: { alerta_seguridad: false }
+    }]);
+  } catch (e) {
+    console.warn('No se pudo registrar auditoría', e);
+  }
 
   cerrarModalExportarFicha();
 }
@@ -801,10 +830,23 @@ async function exportarBaseCompleta() {
     const { data, error } = await supabaseClient.from('historias_clinicas').select('*');
     if (error) throw error;
 
-    const worksheet = XLSX.utils.json_to_sheet(data);
+    const worksheet = XLSX.utils.json_to_sheet(data || []);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Base Epidemiológica');
     XLSX.writeFile(workbook, `Base_Epidemiologica_MDS_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    await supabaseClient.from('export_audit_log').insert([{
+      user_id: state.currentUser.id,
+      user_email: state.currentUser.email,
+      user_name: obtenerNombreProfesional(state.currentUser),
+      tipo: 'base_completa',
+      motivo: 'Exportación masiva administrativa',
+      metadata: {
+        alerta_seguridad: true,
+        cantidad_registros: (data || []).length,
+        alerta_motivo: 'Exportación de base completa'
+      }
+    }]);
   } catch (err) {
     alert('Error al exportar la base completa.');
   }
@@ -835,16 +877,10 @@ function cargarFichaParaEditar() {
   };
 
   const p = state.pacienteActual;
-  
-  // Cargar casilla de consentimiento
-  const chkConsentimiento = document.getElementById('consentimientoInformado');
-  if (chkConsentimiento) {
-    chkConsentimiento.checked = p.consentimiento_informado ?? true;
-  }
-
   setVal('triajeNivel', p.triaje_nivel);
   setVal('patologiaDual', p.patologia_dual);
   setVal('riesgoInminente', p.riesgo_inminente);
+  setVal('tipoDocumento', p.tipo_documento);
   setVal('pacienteDni', p.paciente_dni);
   setVal('pacienteNombre', p.paciente_nombre);
   setVal('pacienteApellido', p.paciente_apellido);
@@ -853,13 +889,25 @@ function cargarFichaParaEditar() {
   setVal('fechaNacimiento', p.fecha_nacimiento);
   setVal('edad', p.edad);
   setVal('grupoEtario', p.grupo_etario);
-  setVal('localidad', p.localidad);
+  setVal('calle', p.calle);
+  setVal('numeroCalle', p.numero_calle);
+  setVal('piso', p.piso);
+  setVal('depto', p.depto);
   setVal('barrioResidencia', p.barrio_residencia);
+  setVal('localidad', p.localidad);
+  setVal('departamentoPartido', p.departamento_partido);
+  setVal('provincia', p.provincia || 'Corrientes');
+  setVal('situacionHabitacional', p.situacion_habitacional);
   setVal('nivelEducativo', p.nivel_educativo);
   setVal('situacionLaboral', p.situacion_laboral);
+  setVal('coberturaSalud', p.cobertura_salud);
+  setVal('discapacidad', p.discapacidad);
+  setVal('observacionesDiscapacidad', p.observaciones_discapacidad);
+  setVal('dispositivoCaptura', p.dispositivo_captura);
   setVal('sustanciaConsumida', p.sustancia_consumida);
   setVal('viaAdministracion', p.via_administracion);
   setVal('edadInicio', p.edad_inicio);
+  setVal('fechaInicioConsumo', p.fecha_inicio_consumo);
   setVal('frecuenciaUso', p.frecuencia_uso);
   setVal('policonsumo', p.policonsumo);
   setVal('sustanciasSecundarias', p.sustancias_secundarias);
@@ -880,14 +928,6 @@ async function guardarHistoriaClinica(e) {
   e.preventDefault();
   const clinicalStatus = document.getElementById('clinicalStatus');
 
-  // Validar explícitamente el consentimiento ética/legal
-  const consentimientoChecked = document.getElementById('consentimientoInformado')?.checked;
-
-  if (!consentimientoChecked) {
-    alert('Debe confirmar el resguardo ético y consentimiento de datos (Ley 26.657) antes de guardar la ficha.');
-    return;
-  }
-
   const getVal = (id) => {
     const val = document.getElementById(id)?.value?.trim();
     return val === '' ? null : val;
@@ -895,10 +935,10 @@ async function guardarHistoriaClinica(e) {
 
   const payload = {
     medico_id: state.currentUser.id,
-    consentimiento_informado: consentimientoChecked,
     triaje_nivel: getVal('triajeNivel'),
     patologia_dual: getVal('patologiaDual'),
     riesgo_inminente: getVal('riesgoInminente'),
+    tipo_documento: getVal('tipoDocumento'),
     paciente_dni: getVal('pacienteDni'),
     paciente_nombre: getVal('pacienteNombre'),
     paciente_apellido: getVal('pacienteApellido'),
@@ -907,13 +947,25 @@ async function guardarHistoriaClinica(e) {
     fecha_nacimiento: getVal('fechaNacimiento'),
     edad: getVal('edad') ? parseInt(getVal('edad'), 10) : null,
     grupo_etario: getVal('grupoEtario'),
-    localidad: getVal('localidad'),
+    calle: getVal('calle'),
+    numero_calle: getVal('numeroCalle'),
+    piso: getVal('piso'),
+    depto: getVal('depto'),
     barrio_residencia: getVal('barrioResidencia'),
+    localidad: getVal('localidad'),
+    departamento_partido: getVal('departamentoPartido'),
+    provincia: getVal('provincia') || 'Corrientes',
+    situacion_habitacional: getVal('situacionHabitacional'),
     nivel_educativo: getVal('nivelEducativo'),
     situacion_laboral: getVal('situacionLaboral'),
+    cobertura_salud: getVal('coberturaSalud'),
+    discapacidad: getVal('discapacidad'),
+    observaciones_discapacidad: getVal('observacionesDiscapacidad'),
+    dispositivo_captura: getVal('dispositivoCaptura'),
     sustancia_consumida: getVal('sustanciaConsumida'),
     via_administracion: getVal('viaAdministracion'),
     edad_inicio: getVal('edadInicio') ? parseInt(getVal('edadInicio'), 10) : null,
+    fecha_inicio_consumo: getVal('fechaInicioConsumo'),
     frecuencia_uso: getVal('frecuenciaUso'),
     policonsumo: getVal('policonsumo'),
     sustancias_secundarias: getVal('sustanciasSecundarias'),
@@ -931,26 +983,36 @@ async function guardarHistoriaClinica(e) {
   };
 
   try {
-    let respuesta;
-    if (state.pacienteActual?.id) {
-      respuesta = await supabaseClient
+    let historiaId = state.pacienteActual?.id;
+
+    if (historiaId) {
+      // Actualización de ficha existente
+      const { error } = await supabaseClient
         .from('historias_clinicas')
         .update(payload)
-        .eq('id', state.pacienteActual.id);
+        .eq('id', historiaId);
+      if (error) throw error;
     } else {
-      payload.evoluciones_json = [
-        {
-          tipo: 'Ingreso',
-          fecha: new Date().toISOString(),
-          motivo: payload.motivo_consulta || 'Ingreso registrado en el sistema.',
-          dispositivo: 'Admisión',
-          profesional: obtenerNombreProfesional(state.currentUser)
-        }
-      ];
-      respuesta = await supabaseClient.from('historias_clinicas').insert([payload]);
-    }
+      // Nueva ficha
+      const { data, error } = await supabaseClient
+        .from('historias_clinicas')
+        .insert([payload])
+        .select('id')
+        .single();
+      if (error) throw error;
+      historiaId = data.id;
 
-    if (respuesta.error) throw respuesta.error;
+      // Crear el primer registro de Ingreso en la tabla evoluciones
+      await supabaseClient.from('evoluciones').insert([{
+        historia_id: historiaId,
+        tipo: 'Ingreso',
+        fecha: new Date().toISOString(),
+        motivo: payload.motivo_consulta || 'Ingreso registrado en el sistema.',
+        dispositivo: payload.dispositivo_captura || 'Admisión',
+        profesional: obtenerNombreProfesional(state.currentUser),
+        created_by: state.currentUser.id
+      }]);
+    }
 
     if (clinicalStatus) {
       clinicalStatus.textContent = '¡Historia clínica guardada con éxito!';
