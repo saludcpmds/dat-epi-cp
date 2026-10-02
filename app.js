@@ -26,9 +26,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data: { session }, error } = await supabaseClient.auth.getSession();
     if (error) throw error;
+
     if (session?.user) {
-      state.currentUser = session.user;
-      mostrarDashboard(session.user);
+      const remember = localStorage.getItem('mds_remember_me') === '1';
+      const isActiveSession = sessionStorage.getItem('mds_session_active') === '1';
+
+      // Si no marcó "Recordarme" y cerró el navegador → forzar logout
+      if (!remember && !isActiveSession) {
+        await supabaseClient.auth.signOut();
+        mostrarLogin();
+      } else {
+        state.currentUser = session.user;
+        mostrarDashboard(session.user);
+      }
     } else {
       mostrarLogin();
     }
@@ -154,6 +164,12 @@ function inicializarEventos() {
     }
   });
 
+  // Toggle mostrar/ocultar contraseña
+  document.getElementById('togglePassword')?.addEventListener('change', (e) => {
+    const input = document.getElementById('loginPassword');
+    if (input) input.type = e.target.checked ? 'text' : 'password';
+  });
+
   document.getElementById('loginForm')?.addEventListener('submit', manejarLogin);
   document.getElementById('logoutBtn')?.addEventListener('click', async e => {
     e.preventDefault();
@@ -161,6 +177,8 @@ function inicializarEventos() {
     finally {
       state.pacienteActual = null;
       state.currentUser = null;
+      localStorage.removeItem('mds_remember_me');
+      sessionStorage.removeItem('mds_session_active');
       mostrarLogin();
       location.reload();
     }
@@ -278,12 +296,24 @@ async function manejarLogin(e) {
 
   const email = document.getElementById('loginEmail')?.value?.trim();
   const password = document.getElementById('loginPassword')?.value;
+  const rememberMe = document.getElementById('rememberMe')?.checked ?? false;
+
   if (!email || !password) return;
 
   try {
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
     if (data?.user) {
+      // Lógica de "Recordarme"
+      if (rememberMe) {
+        localStorage.setItem('mds_remember_me', '1');
+        sessionStorage.removeItem('mds_session_active');
+      } else {
+        localStorage.removeItem('mds_remember_me');
+        sessionStorage.setItem('mds_session_active', '1');
+      }
+
       state.currentUser = data.user;
       mostrarDashboard(data.user);
     }
