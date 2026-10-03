@@ -459,7 +459,6 @@ async function ejecutarBusqueda() {
     return;
   }
 
-  // Registrar actividad de búsqueda
   registrarActividad('BUSQUEDA', `Buscó término: "${query}"`);
 
   const msgCargando = 'Buscando registros...';
@@ -832,6 +831,8 @@ async function confirmarExportarFicha() {
     { Campo: 'Número Documento', Valor: sanitizarValorExcel(p.paciente_dni) },
     { Campo: 'Nombre', Valor: sanitizarValorExcel(p.paciente_nombre) },
     { Campo: 'Apellido', Valor: sanitizarValorExcel(p.paciente_apellido) },
+    { Campo: 'Teléfono', Valor: sanitizarValorExcel(p.paciente_telefono) },
+    { Campo: 'Mail', Valor: sanitizarValorExcel(p.paciente_email) },
     { Campo: 'Nivel Triaje (ICAP)', Valor: sanitizarValorExcel(p.triaje_nivel) },
     { Campo: 'Sustancia Principal', Valor: sanitizarValorExcel(p.sustancia_consumida) },
     { Campo: 'Policonsumo', Valor: sanitizarValorExcel(p.policonsumo) },
@@ -926,6 +927,8 @@ function cargarFichaParaEditar() {
   setVal('pacienteDni', p.paciente_dni);
   setVal('pacienteNombre', p.paciente_nombre);
   setVal('pacienteApellido', p.paciente_apellido);
+  setVal('pacienteTelefono', p.paciente_telefono);
+  setVal('pacienteEmail', p.paciente_email);
   setVal('estadoPaciente', p.estado_paciente || 'en_tratamiento');
   setVal('sexo', p.sexo);
   setVal('fechaNacimiento', p.fecha_nacimiento);
@@ -995,6 +998,8 @@ async function guardarHistoriaClinica(e) {
     paciente_dni: getVal('pacienteDni'),
     paciente_nombre: getVal('pacienteNombre'),
     paciente_apellido: getVal('pacienteApellido'),
+    paciente_telefono: getVal('pacienteTelefono'),
+    paciente_email: getVal('pacienteEmail'),
     estado_paciente: getVal('estadoPaciente') || 'en_tratamiento',
     sexo: getVal('sexo'),
     fecha_nacimiento: getVal('fechaNacimiento'),
