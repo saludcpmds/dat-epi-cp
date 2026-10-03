@@ -19,6 +19,23 @@ const state = { pacienteActual: null, currentUser: null };
 const SEARCH_LIMIT = 50;
 const ADMIN_EMAILS = ['armandojara07@gmail.com', 'laurandreabenitez@gmail.com'];
 
+// --- REGISTRO DE AUDITORÍA Y TRAZABILIDAD ---
+async function registrarActividad(accion, detalle, metadata = {}) {
+  if (!state.currentUser) return;
+  try {
+    await supabaseClient.from('user_activity_log').insert([{
+      user_id: state.currentUser.id,
+      user_email: state.currentUser.email,
+      user_name: obtenerNombreProfesional(state.currentUser),
+      accion: accion,
+      detalle: detalle,
+      metadata: metadata
+    }]);
+  } catch (err) {
+    console.warn('[AuditLogErr]', err);
+  }
+}
+
 // --- INICIALIZACIÓN ---
 window.addEventListener('DOMContentLoaded', async () => {
   inicializarEventos();
@@ -31,7 +48,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       const remember = localStorage.getItem('mds_remember_me') === '1';
       const isActiveSession = sessionStorage.getItem('mds_session_active') === '1';
 
-      // Si no marcó "Recordarme" y cerró el navegador → forzar logout
       if (!remember && !isActiveSession) {
         await supabaseClient.auth.signOut();
         mostrarLogin();
@@ -164,7 +180,6 @@ function inicializarEventos() {
     }
   });
 
-  // Toggle mostrar/ocultar contraseña
   document.getElementById('togglePassword')?.addEventListener('change', (e) => {
     const input = document.getElementById('loginPassword');
     if (input) input.type = e.target.checked ? 'text' : 'password';
@@ -173,7 +188,10 @@ function inicializarEventos() {
   document.getElementById('loginForm')?.addEventListener('submit', manejarLogin);
   document.getElementById('logoutBtn')?.addEventListener('click', async e => {
     e.preventDefault();
-    try { await supabaseClient.auth.signOut(); } catch (err) { console.error(err); }
+    try { 
+      await registrarActividad('LOGOUT', 'Cierre de sesión manual');
+      await supabaseClient.auth.signOut(); 
+    } catch (err) { console.error(err); }
     finally {
       state.pacienteActual = null;
       state.currentUser = null;
@@ -244,6 +262,15 @@ function inicializarEventos() {
     const wrap = document.getElementById('exportMotivoOtroWrap');
     if (wrap) wrap.classList.toggle('hidden', e.target.value !== 'Otro');
   });
+
+  // Modal Auditoría de Movimientos
+  document.getElementById('btnVerAuditoria')?.addEventListener('click', abrirModalAuditoria);
+  document.getElementById('btnCerrarAuditoria')?.addEventListener('click', () => {
+    document.getElementById('modalAuditoria')?.classList.add('hidden');
+  });
+  document.getElementById('modalAuditoriaBackdrop')?.addEventListener('click', () => {
+    document.getElementById('modalAuditoria')?.classList.add('hidden');
+  });
 }
 
 // --- GEOLOCALIZACIÓN ---
@@ -305,7 +332,6 @@ async function manejarLogin(e) {
     if (error) throw error;
 
     if (data?.user) {
-      // Lógica de "Recordarme"
       if (rememberMe) {
         localStorage.setItem('mds_remember_me', '1');
         sessionStorage.removeItem('mds_session_active');
@@ -315,6 +341,7 @@ async function manejarLogin(e) {
       }
 
       state.currentUser = data.user;
+      await registrarActividad('LOGIN', 'Inicio de sesión exitoso');
       mostrarDashboard(data.user);
     }
   } catch (error) {
@@ -432,6 +459,9 @@ async function ejecutarBusqueda() {
     return;
   }
 
+  // Registrar actividad de búsqueda
+  registrarActividad('BUSQUEDA', `Buscó término: "${query}"`);
+
   const msgCargando = 'Buscando registros...';
   if (tbody) {
     tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-xs text-slate-400">${msgCargando}</td></tr>`;
@@ -462,7 +492,6 @@ async function ejecutarBusqueda() {
     if (contador) contador.textContent = `${pacientesUnicos.length} resultados`;
     renderTablaSegura(pacientesUnicos);
 
-    // Auto-scroll a la sección de resultados en dispositivos móviles
     document.getElementById('resultadoBusqueda')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } catch (err) {
@@ -503,7 +532,6 @@ function renderTablaSegura(registros) {
     const dni = item.paciente_dni || 'N/R';
     const tipoDoc = item.tipo_documento ? `${item.tipo_documento} ` : '';
 
-    // 1. Render para Tabla (Pantallas medianas y grandes)
     if (tbody) {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
@@ -537,7 +565,6 @@ function renderTablaSegura(registros) {
       fragmentTbody.appendChild(tr);
     }
 
-    // 2. Render para Tarjetas Móviles (Smartphones)
     if (cards) {
       const card = document.createElement('div');
       card.className = 'bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3';
@@ -609,6 +636,8 @@ async function verFichaPaciente(id) {
     if (error || !data) throw new Error('No se pudo cargar la ficha del paciente.');
 
     state.pacienteActual = data;
+
+    registrarActividad('VER_FICHA', `Consultó ficha de ${data.paciente_nombre} ${data.paciente_apellido} (DNI ${data.paciente_dni})`);
 
     actualizarTexto('fichaDniHeader', `FICHA - ${data.tipo_documento || 'DOC'} ${data.paciente_dni || 'N/R'}`);
     actualizarTexto('fichaNombreHeader', `${data.paciente_nombre || ''} ${data.paciente_apellido || ''}`.trim());
@@ -731,6 +760,8 @@ async function guardarNuevaEntrada() {
     const { error } = await supabaseClient.from('evoluciones').insert([nuevaEntrada]);
     if (error) throw error;
 
+    registrarActividad('NUEVA_EVOLUCION', `Agregó ${nuevaEntrada.tipo} en ficha DNI ${state.pacienteActual.paciente_dni}`);
+
     await cargarEvolucionesDesdeTabla(state.pacienteActual.id);
     resetInput('motivoEntrada');
     resetInput('dispositivoEntrada');
@@ -752,6 +783,7 @@ async function actualizarEstadoRapido(e) {
   if (error) {
     alert('Error al actualizar el estado: ' + error.message);
   } else {
+    registrarActividad('CAMBIO_ESTADO', `Cambió estado a "${nuevoEstado}" en ficha DNI ${state.pacienteActual.paciente_dni}`);
     state.pacienteActual.estado_paciente = nuevoEstado;
     verFichaPaciente(state.pacienteActual.id);
     cargarMetricasGlobales();
@@ -820,6 +852,8 @@ async function confirmarExportarFicha() {
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Ficha Clínica');
   XLSX.writeFile(workbook, `Ficha_Epi_${p.paciente_dni || 'SIN_DNI'}.xlsx`);
 
+  registrarActividad('EXPORTAR_FICHA', `Exportó Excel de ficha DNI ${p.paciente_dni}. Motivo: ${motivo}`);
+
   try {
     await supabaseClient.from('export_audit_log').insert([{
       user_id: state.currentUser.id,
@@ -845,6 +879,8 @@ async function exportarBaseCompleta() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Base Epidemiológica');
     XLSX.writeFile(workbook, `Base_Epidemiologica_MDS_${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    registrarActividad('EXPORTAR_BASE_COMPLETA', `Exportó la base epidemiológica completa (${data?.length || 0} registros)`);
 
     await supabaseClient.from('export_audit_log').insert([{
       user_id: state.currentUser.id,
@@ -1011,10 +1047,13 @@ async function guardarHistoriaClinica(e) {
     if (historiaId) {
       const { error } = await supabaseClient.from('historias_clinicas').update(payload).eq('id', historiaId);
       if (error) throw error;
+      registrarActividad('EDITAR_FICHA', `Editó ficha del paciente ${payload.paciente_nombre} ${payload.paciente_apellido} (DNI ${payload.paciente_dni})`);
     } else {
       const { data, error } = await supabaseClient.from('historias_clinicas').insert([payload]).select('id').single();
       if (error) throw error;
       historiaId = data.id;
+
+      registrarActividad('CREAR_FICHA', `Creó nueva ficha para ${payload.paciente_nombre} ${payload.paciente_apellido} (DNI ${payload.paciente_dni})`);
 
       await supabaseClient.from('evoluciones').insert([{
         historia_id: historiaId,
@@ -1044,6 +1083,51 @@ async function guardarHistoriaClinica(e) {
       clinicalStatus.className = 'text-sm mt-3 text-center text-red-500 font-semibold block';
       clinicalStatus.classList.remove('hidden');
     }
+  }
+}
+
+// --- AUDITORÍA DE USUARIOS (PANEL ADMINISTRADOR) ---
+async function abrirModalAuditoria() {
+  if (!esAdministrador(state.currentUser)) return;
+  const modal = document.getElementById('modalAuditoria');
+  const lista = document.getElementById('listaAuditoria');
+  modal?.classList.remove('hidden');
+  lista.innerHTML = '<p class="text-center text-slate-400 text-sm py-8">Cargando registros de actividad...</p>';
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('user_activity_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      lista.innerHTML = '<p class="text-center text-slate-400 text-sm py-8">No hay actividades registradas aún.</p>';
+      return;
+    }
+
+    lista.innerHTML = '';
+    data.forEach(row => {
+      const fecha = new Date(row.created_at).toLocaleString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+
+      const div = document.createElement('div');
+      div.className = 'p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex justify-between items-center gap-4';
+      div.innerHTML = `
+        <div>
+          <span class="font-bold text-slate-900">${row.user_name || row.user_email}</span>
+          <span class="ml-2 font-mono px-2 py-0.5 rounded text-[10px] bg-sky-100 text-sky-800 font-bold">${row.accion}</span>
+          <p class="text-slate-600 mt-1">${row.detalle}</p>
+        </div>
+        <span class="font-mono text-slate-400 whitespace-nowrap text-[11px]">${fecha}</span>
+      `;
+      lista.appendChild(div);
+    });
+  } catch (err) {
+    lista.innerHTML = `<p class="text-center text-red-500 text-sm py-4">Error al cargar actividad: ${err.message}</p>`;
   }
 }
 
