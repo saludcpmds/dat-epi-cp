@@ -195,12 +195,16 @@
         </div>
 
         <div id="adminActions" class="mt-4 hidden space-y-4">
-          <div>
+          <div class="flex flex-wrap items-center gap-2">
             <button id="btnExportarTodo" type="button" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
               <span>⬇ Exportar base completa (.xlsx)</span>
             </button>
-            <p class="text-[10px] text-slate-500 mt-1">Solo visible para administradores / epidemiología</p>
+            <button id="btnVerAuditoria" type="button" class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition">
+              <span>👥 Actividad de Usuarios</span>
+            </button>
           </div>
+          <p class="text-[10px] text-slate-500">Acciones exclusivas para administradores / epidemiología</p>
+
           <div id="panelAlertasSeguridad" class="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 shadow-sm">
             <div class="flex items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-2">
@@ -594,7 +598,7 @@
               </div>
             </div>
 
-            <!-- NUEVOS CAMPOS SOCIOHABITACIONALES INTEGRADOS -->
+            <!-- SOCIOHABITACIONALES -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
               <div>
                 <label class="block text-sm font-medium text-gray-700" for="habitacionesDormir">Habitaciones p/Dormir</label>
@@ -914,6 +918,21 @@
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" id="btnCancelarExportModal" class="text-sm px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">Cancelar</button>
         <button type="button" id="btnConfirmarExportModal" class="text-sm px-4 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700">Confirmar y exportar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL AUDITORÍA DE USUARIOS -->
+  <div id="modalAuditoria" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" id="modalAuditoriaBackdrop"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-4xl border border-slate-200 p-6 space-y-4 z-10 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-lg font-bold text-slate-900">Historial de Movimientos de Usuarios</h3>
+        <button id="btnCerrarAuditoria" type="button" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+      
+      <div class="overflow-y-auto flex-1 space-y-2 pr-1" id="listaAuditoria">
+        <p class="text-center text-slate-400 text-sm py-8">Cargando registros...</p>
       </div>
     </div>
   </div>
