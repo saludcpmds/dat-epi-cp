@@ -225,6 +225,12 @@ function inicializarEventos() {
       obsEl.readOnly = false;
       obsEl.classList.remove('bg-slate-100', 'cursor-not-allowed');
     }
+    // Estado epidemiológico fijo en alta
+    const estadoEl = document.getElementById('estadoPaciente');
+    if (estadoEl) {
+      estadoEl.value = 'en_tratamiento';
+      estadoEl.disabled = true;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
@@ -1162,6 +1168,11 @@ function cargarFichaParaEditar() {
   setVal('pacienteTelefono', p.paciente_telefono);
   setVal('pacienteEmail', p.paciente_email);
   setVal('estadoPaciente', p.estado_paciente || 'en_tratamiento');
+  const estadoEl = document.getElementById('estadoPaciente');
+  if (estadoEl) {
+    estadoEl.disabled = true;
+    estadoEl.classList.add('bg-slate-100', 'cursor-not-allowed');
+  }
   setVal('sexo', p.sexo);
   setVal('fechaNacimiento', p.fecha_nacimiento);
   setVal('edad', p.edad);
@@ -1250,7 +1261,9 @@ async function guardarHistoriaClinica(e) {
     paciente_apellido: getVal('pacienteApellido'),
     paciente_telefono: getVal('pacienteTelefono'),
     paciente_email: getVal('pacienteEmail'),
-    estado_paciente: getVal('estadoPaciente') || 'en_tratamiento',
+    estado_paciente: (state.pacienteActual?.estado_paciente)
+      || getVal('estadoPaciente')
+      || 'en_tratamiento',
     sexo: getVal('sexo'),
     fecha_nacimiento: getVal('fechaNacimiento'),
     edad: getVal('edad') ? parseInt(getVal('edad'), 10) : null,
