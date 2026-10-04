@@ -12,6 +12,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     .frost {
       backdrop-filter: blur(12px);
@@ -300,6 +302,10 @@
                 <input type="text" id="motivoEntrada" maxlength="500" placeholder="Ej. Presenta mejoría en su tratamiento..." class="mt-1 w-full text-xs p-2 border rounded-lg bg-white">
               </div>
             </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600" for="observacionesEntrada">Observaciones</label>
+              <textarea id="observacionesEntrada" rows="2" maxlength="1000" placeholder="Observaciones adicionales de esta entrada..." class="mt-1 w-full text-xs p-2 border rounded-lg bg-white"></textarea>
+            </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
                 <label class="block text-xs font-medium text-slate-600" for="dispositivoEntrada">Dispositivo</label>
@@ -325,7 +331,7 @@
               <option value="egreso">Egreso</option>
             </select>
             <button id="btnExportarExcel" type="button" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 font-semibold text-xs text-slate-700 transition flex items-center justify-center gap-2">
-              <span>Exportar (.xlsx)</span>
+              <span>Exportar PDF</span>
             </button>
           </div>
         </div>
@@ -338,8 +344,8 @@
     <div class="form-card bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-5xl border-t-4 border-sky-600 space-y-8">
       <div class="flex justify-between items-center flex-wrap gap-2">
         <div>
-          <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Historia Clínica Epidemiológica</h2>
-          <p class="text-xs sm:text-sm text-slate-500">Registro único para Sala de Situación – MDS Corrientes</p>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900">Registro Único del Paciente</h2>
+          <p class="text-xs sm:text-sm text-slate-500">DAT – MDS - Corrientes</p>
         </div>
         <button id="btnVolverDashboard" type="button" class="text-sm text-sky-700 font-semibold hover:underline">← Volver</button>
       </div>
@@ -376,6 +382,16 @@
                 <option value="Trastorno psiquiátrico sin riesgo agudo">Trastorno psiquiátrico sin riesgo agudo</option>
                 <option value="Riesgo cierto e inminente">Riesgo cierto e inminente</option>
               </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            <div>
+              <label class="block text-sm font-medium text-gray-700" for="nombreProfesional">Nombre del Profesional</label>
+              <input type="text" id="nombreProfesional" maxlength="120" placeholder="Apellido y Nombre" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700" for="mpProfesional">M.P.</label>
+              <input type="text" id="mpProfesional" maxlength="40" placeholder="Matrícula Profesional" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
             </div>
           </div>
         </div>
@@ -872,12 +888,12 @@
               <input type="text" id="vinculacionRed" maxlength="200" placeholder="Ej. Becas Cuidándonos, CAAC, Potenciar" class="mt-1 block w-full px-3 py-2 border rounded-md">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700" for="motivoConsulta">Motivo de Consulta Asistencial *</label>
-              <textarea id="motivoConsulta" rows="2" required maxlength="1000" placeholder="Describa la demanda o motivo de consulta..." class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
+              <label class="block text-sm font-medium text-gray-700" for="motivoConsulta">Motivo de Primer Consulta/Encuentro *</label>
+              <textarea id="motivoConsulta" rows="2" required maxlength="1000" placeholder="Describa la demanda o motivo de la primera consulta..." class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700" for="observaciones">Observaciones / Impresión Diagnóstica</label>
-              <textarea id="observaciones" rows="3" maxlength="2000" placeholder="Observaciones clínicas y epidemiológicas adicionales..." class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
+              <label class="block text-sm font-medium text-gray-700" for="observaciones">Primer Observación</label>
+              <textarea id="observaciones" rows="3" maxlength="2000" placeholder="Primera observación clínica / epidemiológica..." class="mt-1 block w-full px-3 py-2 border rounded-md"></textarea>
             </div>
           </div>
         </div>
@@ -907,8 +923,8 @@
     <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" id="modalExportarBackdrop"></div>
     <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md border border-slate-200 p-6 space-y-4 z-10">
       <div>
-        <h3 class="text-lg font-bold text-slate-900">Exportar ficha clínica</h3>
-        <p class="text-xs text-slate-500 mt-1">Por trazabilidad legal debe confirmar el motivo de la exportación.</p>
+        <h3 class="text-lg font-bold text-slate-900">Exportar ficha clínica (PDF)</h3>
+        <p class="text-xs text-slate-500 mt-1">Se generará un PDF completo con datos de la ficha y el historial de evoluciones. Por trazabilidad legal debe confirmar el motivo.</p>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700" for="exportMotivo">Motivo de la exportación *</label>
