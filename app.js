@@ -214,6 +214,17 @@ function inicializarEventos() {
     if (geoStatus) geoStatus.textContent = '';
     const status = document.getElementById('clinicalStatus');
     if (status) status.classList.add('hidden');
+    // Al crear ficha nueva, Motivo y Primer Observación deben ser editables
+    const motivoEl = document.getElementById('motivoConsulta');
+    const obsEl = document.getElementById('observaciones');
+    if (motivoEl) {
+      motivoEl.readOnly = false;
+      motivoEl.classList.remove('bg-slate-100', 'cursor-not-allowed');
+    }
+    if (obsEl) {
+      obsEl.readOnly = false;
+      obsEl.classList.remove('bg-slate-100', 'cursor-not-allowed');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
@@ -240,6 +251,7 @@ function inicializarEventos() {
   document.getElementById('btnCancelarEntrada')?.addEventListener('click', () => {
     document.getElementById('formNuevaEntrada')?.classList.add('hidden');
     resetInput('motivoEntrada');
+    resetInput('observacionesEntrada');
     resetInput('dispositivoEntrada');
     resetInput('profesionalEntrada');
   });
@@ -724,6 +736,14 @@ async function cargarEvolucionesDesdeTabla(historiaId) {
       descP.textContent = item.motivo || 'Sin detalles';
 
       entryDiv.append(dot, headerDiv, descP);
+
+      if (item.observaciones) {
+        const obsP = document.createElement('p');
+        obsP.className = 'text-xs text-slate-500 mt-1 italic';
+        obsP.textContent = `Observaciones: ${item.observaciones}`;
+        entryDiv.appendChild(obsP);
+      }
+
       fragment.appendChild(entryDiv);
     });
 
@@ -750,6 +770,7 @@ async function guardarNuevaEntrada() {
     tipo: document.getElementById('tipoEntrada')?.value || 'Evolución',
     fecha: new Date().toISOString(),
     motivo,
+    observaciones: document.getElementById('observacionesEntrada')?.value?.trim() || null,
     dispositivo: document.getElementById('dispositivoEntrada')?.value?.trim() || 'No especificado',
     profesional: document.getElementById('profesionalEntrada')?.value?.trim() || 'No especificado',
     created_by: state.currentUser?.id || null
@@ -763,6 +784,7 @@ async function guardarNuevaEntrada() {
 
     await cargarEvolucionesDesdeTabla(state.pacienteActual.id);
     resetInput('motivoEntrada');
+    resetInput('observacionesEntrada');
     resetInput('dispositivoEntrada');
     resetInput('profesionalEntrada');
     document.getElementById('formNuevaEntrada')?.classList.add('hidden');
@@ -774,29 +796,66 @@ async function guardarNuevaEntrada() {
 async function actualizarEstadoRapido(e) {
   if (!state.pacienteActual?.id) return;
   const nuevoEstado = e.target.value;
-  const { error } = await supabaseClient
-    .from('historias_clinicas')
-    .update({ estado_paciente: nuevoEstado })
-    .eq('id', state.pacienteActual.id);
+  const estadosValidos = ['en_tratamiento', 'en_seguimiento', 'egreso'];
+  if (!estadosValidos.includes(nuevoEstado)) {
+    alert('Estado no válido.');
+    return;
+  }
 
-  if (error) {
-    alert('Error al actualizar el estado: ' + error.message);
-  } else {
-    registrarActividad('CAMBIO_ESTADO', `Cambió estado a "${nuevoEstado}" en ficha DNI ${state.pacienteActual.paciente_dni}`);
+  try {
+    const { data, error } = await supabaseClient
+      .from('historias_clinicas')
+      .update({ estado_paciente: nuevoEstado })
+      .eq('id', state.pacienteActual.id)
+      .select('id, estado_paciente')
+      .single();
+
+    if (error) throw error;
+
+    if (!data || data.estado_paciente !== nuevoEstado) {
+      throw new Error('El estado no se actualizó en la base de datos. Verifique permisos (RLS).');
+    }
+
     state.pacienteActual.estado_paciente = nuevoEstado;
-    verFichaPaciente(state.pacienteActual.id);
+
+    // Registrar en timeline una entrada de cambio de estado (no bloquea si falla)
+    const labelEstado = {
+      en_tratamiento: 'En tratamiento',
+      en_seguimiento: 'En seguimiento',
+      egreso: 'Egreso'
+    }[nuevoEstado] || nuevoEstado;
+
+    try {
+      await supabaseClient.from('evoluciones').insert([{
+        historia_id: state.pacienteActual.id,
+        tipo: 'Evolución',
+        fecha: new Date().toISOString(),
+        motivo: `Cambio de estado a: ${labelEstado}`,
+        observaciones: null,
+        dispositivo: 'Sistema',
+        profesional: obtenerNombreProfesional(state.currentUser),
+        created_by: state.currentUser?.id || null
+      }]);
+    } catch (evErr) {
+      console.warn('[CambioEstado] No se pudo registrar entrada en timeline:', evErr);
+    }
+
+    registrarActividad('CAMBIO_ESTADO', `Cambió estado a "${nuevoEstado}" en ficha DNI ${state.pacienteActual.paciente_dni}`);
+
+    await verFichaPaciente(state.pacienteActual.id);
     cargarMetricasGlobales();
+  } catch (err) {
+    console.error('[CambioEstado]', err);
+    alert('Error al actualizar el estado: ' + (err.message || 'Error desconocido'));
+    // Restaurar valor anterior en el select
+    const selectEstado = document.getElementById('cambioEstadoRapido');
+    if (selectEstado && state.pacienteActual?.estado_paciente) {
+      selectEstado.value = state.pacienteActual.estado_paciente;
+    }
   }
 }
 
-// --- EXPORTACIÓN ---
-function sanitizarValorExcel(valor) {
-  if (valor == null) return '';
-  const str = String(valor);
-  if (['=', '+', '-', '@'].includes(str.charAt(0))) return `'${str}`;
-  return str;
-}
-
+// --- EXPORTACIÓN PDF ---
 function abrirModalExportarFicha() {
   if (!state.pacienteActual) {
     alert('No hay ninguna ficha activa para exportar.');
@@ -807,6 +866,17 @@ function abrirModalExportarFicha() {
 
 function cerrarModalExportarFicha() {
   document.getElementById('modalExportarFicha')?.classList.add('hidden');
+  const errEl = document.getElementById('exportModalError');
+  if (errEl) errEl.classList.add('hidden');
+}
+
+function fmt(v) {
+  if (v == null || v === '') return '—';
+  return String(v);
+}
+
+function labelEstado(est) {
+  return { en_tratamiento: 'En tratamiento', en_seguimiento: 'En seguimiento', egreso: 'Egreso' }[est] || est || '—';
 }
 
 async function confirmarExportarFicha() {
@@ -826,34 +896,194 @@ async function confirmarExportarFicha() {
   }
 
   const p = state.pacienteActual;
-  const datos = [
-    { Campo: 'Tipo Documento', Valor: sanitizarValorExcel(p.tipo_documento) },
-    { Campo: 'Número Documento', Valor: sanitizarValorExcel(p.paciente_dni) },
-    { Campo: 'Nombre', Valor: sanitizarValorExcel(p.paciente_nombre) },
-    { Campo: 'Apellido', Valor: sanitizarValorExcel(p.paciente_apellido) },
-    { Campo: 'Teléfono', Valor: sanitizarValorExcel(p.paciente_telefono) },
-    { Campo: 'Mail', Valor: sanitizarValorExcel(p.paciente_email) },
-    { Campo: 'Nivel Triaje (ICAP)', Valor: sanitizarValorExcel(p.triaje_nivel) },
-    { Campo: 'Sustancia Principal', Valor: sanitizarValorExcel(p.sustancia_consumida) },
-    { Campo: 'Policonsumo', Valor: sanitizarValorExcel(p.policonsumo) },
-    { Campo: 'Atención Guardia', Valor: sanitizarValorExcel(p.atencion_guardia) },
-    { Campo: 'Estado Paciente', Valor: sanitizarValorExcel(p.estado_paciente) },
-    { Campo: 'Localidad', Valor: sanitizarValorExcel(p.localidad) },
-    { Campo: 'Barrio', Valor: sanitizarValorExcel(p.barrio_residencia) },
-    { Campo: 'Habitaciones p/Dormir', Valor: sanitizarValorExcel(p.habitaciones_dormir) },
-    { Campo: 'Personas en Vivienda', Valor: sanitizarValorExcel(p.personas_vivienda) },
-    { Campo: 'Servicio Básico de Agua', Valor: sanitizarValorExcel(p.servicio_agua) },
-    { Campo: 'Eliminación de Excretas', Valor: sanitizarValorExcel(p.eliminacion_excretas) },
-    { Campo: 'Latitud', Valor: sanitizarValorExcel(p.latitud) },
-    { Campo: 'Longitud', Valor: sanitizarValorExcel(p.longitud) }
-  ];
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) {
+    alert('No se pudo cargar la librería PDF. Recargue la página e intente nuevamente.');
+    return;
+  }
 
-  const worksheet = XLSX.utils.json_to_sheet(datos);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Ficha Clínica');
-  XLSX.writeFile(workbook, `Ficha_Epi_${p.paciente_dni || 'SIN_DNI'}.xlsx`);
+  // Cargar evoluciones completas
+  let evoluciones = [];
+  try {
+    const { data } = await supabaseClient
+      .from('evoluciones')
+      .select('*')
+      .eq('historia_id', p.id)
+      .order('fecha', { ascending: true });
+    evoluciones = data || [];
+  } catch (e) {
+    console.warn('[ExportPDF] No se pudieron cargar evoluciones', e);
+  }
 
-  registrarActividad('EXPORTAR_FICHA', `Exportó Excel de ficha DNI ${p.paciente_dni}. Motivo: ${motivo}`);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  let y = 16;
+
+  const addTitle = (text, size = 14) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(size);
+    doc.setTextColor(15, 23, 42);
+    doc.text(text, margin, y);
+    y += size * 0.5 + 2;
+  };
+
+  const addSection = (title) => {
+    if (y > 270) { doc.addPage(); y = 16; }
+    doc.setFillColor(226, 232, 240);
+    doc.rect(margin, y - 4, pageW - margin * 2, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(30, 64, 175);
+    doc.text(title, margin + 2, y);
+    y += 8;
+  };
+
+  const addRow = (label, value) => {
+    if (y > 280) { doc.addPage(); y = 16; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(label + ':', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    const valStr = fmt(value);
+    const lines = doc.splitTextToSize(valStr, pageW - margin * 2 - 55);
+    doc.text(lines, margin + 55, y);
+    y += Math.max(5, lines.length * 4);
+  };
+
+  // Encabezado
+  addTitle('REGISTRO ÚNICO DEL PACIENTE', 13);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text('DAT – MDS - Corrientes  |  Dirección de Asistencia y Tratamiento', margin, y);
+  y += 5;
+  doc.setFontSize(8);
+  doc.text(`Exportado: ${new Date().toLocaleString('es-AR')}  |  Motivo: ${motivo}  |  Por: ${obtenerNombreProfesional(state.currentUser)}`, margin, y);
+  y += 8;
+  doc.setDrawColor(148, 163, 184);
+  doc.line(margin, y, pageW - margin, y);
+  y += 6;
+
+  // Identificación
+  addSection('1. Identificación');
+  addRow('Documento', `${fmt(p.tipo_documento)} ${fmt(p.paciente_dni)}`);
+  addRow('Nombre completo', `${fmt(p.paciente_nombre)} ${fmt(p.paciente_apellido)}`);
+  addRow('Teléfono', p.paciente_telefono);
+  addRow('Email', p.paciente_email);
+  addRow('Género', p.sexo);
+  addRow('Fecha nac. / Edad', `${fmt(p.fecha_nacimiento)}  |  ${fmt(p.edad)} años  |  ${fmt(p.grupo_etario)}`);
+  addRow('Estado actual', labelEstado(p.estado_paciente));
+
+  // Triaje
+  addSection('0. Triaje ICAP / Criterios de Admisión');
+  addRow('Nivel de Triaje', p.triaje_nivel);
+  addRow('Patología Dual', p.patologia_dual);
+  addRow('Riesgo Inminente', p.riesgo_inminente);
+  addRow('Profesional', p.nombre_profesional);
+  addRow('M.P.', p.mp_profesional);
+
+  // Domicilio
+  addSection('Dirección y situación habitacional');
+  addRow('Calle y N°', `${fmt(p.calle)} ${fmt(p.numero_calle)}  Piso: ${fmt(p.piso)}  Depto: ${fmt(p.depto)}`);
+  addRow('Barrio / Localidad', `${fmt(p.barrio_residencia)}  |  ${fmt(p.localidad)}`);
+  addRow('Depto / Provincia', `${fmt(p.departamento_partido)}  |  ${fmt(p.provincia)}`);
+  addRow('Situación habitacional', p.situacion_habitacional);
+  addRow('Habitaciones / Personas', `${fmt(p.habitaciones_dormir)} hab.  |  ${fmt(p.personas_vivienda)} personas`);
+  addRow('Agua / Excretas', `${fmt(p.servicio_agua)}  |  ${fmt(p.eliminacion_excretas)}`);
+  addRow('Geolocalización', p.latitud && p.longitud ? `${p.latitud}, ${p.longitud}` : null);
+
+  // Sociodemografía
+  addSection('Sociodemografía y salud');
+  addRow('Nivel educativo', p.nivel_educativo);
+  addRow('Situación laboral', p.situacion_laboral);
+  addRow('Cobertura de salud', p.cobertura_salud);
+  addRow('Discapacidad', `${fmt(p.discapacidad)}  ${p.observaciones_discapacidad ? '| ' + p.observaciones_discapacidad : ''}`);
+  addRow('Dispositivo de captura', p.dispositivo_captura);
+
+  // Consumo
+  addSection('2. Patrones de consumo');
+  addRow('Sustancia principal', p.sustancia_consumida);
+  addRow('Vía de administración', p.via_administracion);
+  addRow('Edad / Fecha inicio', `${fmt(p.edad_inicio)} años  |  ${fmt(p.fecha_inicio_consumo)}`);
+  addRow('Frecuencia', p.frecuencia_uso);
+  addRow('Policonsumo', p.policonsumo);
+  addRow('Sustancias secundarias', p.sustancias_secundarias);
+
+  // Contexto
+  addSection('3. Contexto y cuidados');
+  addRow('Lugar de consumo', p.lugar_consumo);
+  addRow('Red de acompañamiento', p.red_acompanamiento);
+  addRow('Motivo / detonante', p.motivos);
+  addRow('Pautas de autocuidado', p.pautas_autocuidado);
+
+  // Asistencia
+  addSection('4. Asistencia y red territorial');
+  addRow('Tratamientos previos', p.consultas_previas);
+  addRow('Atención en guardia', p.atencion_guardia);
+  addRow('Atención salud mental', p.atencion_salud_mental);
+  addRow('Internaciones previas', p.internaciones);
+  addRow('Vinculación a red', p.vinculacion_red);
+  addRow('Motivo Primer Consulta/Encuentro', p.motivo_consulta);
+  addRow('Primer Observación', p.observaciones);
+
+  // Timeline de evoluciones
+  addSection(`Historial de ingresos y evoluciones (${evoluciones.length})`);
+  if (evoluciones.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Sin entradas registradas.', margin, y);
+    y += 6;
+  } else {
+    evoluciones.forEach((ev, idx) => {
+      if (y > 265) { doc.addPage(); y = 16; }
+      const fechaEv = ev.fecha
+        ? new Date(ev.fecha).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '—';
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(14, 116, 144);
+      doc.text(`${idx + 1}. ${fmt(ev.tipo).toUpperCase()}  ·  ${fechaEv}`, margin, y);
+      y += 4;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(51, 65, 85);
+      doc.setFontSize(8);
+      const motivoLines = doc.splitTextToSize(`Motivo: ${fmt(ev.motivo)}`, pageW - margin * 2 - 4);
+      doc.text(motivoLines, margin + 2, y);
+      y += motivoLines.length * 3.8;
+      if (ev.observaciones) {
+        const obsLines = doc.splitTextToSize(`Observaciones: ${ev.observaciones}`, pageW - margin * 2 - 4);
+        doc.setTextColor(100, 116, 139);
+        doc.text(obsLines, margin + 2, y);
+        y += obsLines.length * 3.8;
+      }
+      doc.setTextColor(148, 163, 184);
+      doc.setFontSize(7);
+      doc.text(`Disp: ${fmt(ev.dispositivo)}  |  Profesional: ${fmt(ev.profesional)}`, margin + 2, y);
+      y += 6;
+    });
+  }
+
+  // Pie
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `Confidencial – Ley 26.657  |  Página ${i} de ${totalPages}  |  DAT-MDS Corrientes`,
+      margin,
+      doc.internal.pageSize.getHeight() - 8
+    );
+  }
+
+  const fileName = `RUP_${p.paciente_dni || 'SIN_DNI'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(fileName);
+
+  registrarActividad('EXPORTAR_FICHA', `Exportó PDF de ficha DNI ${p.paciente_dni}. Motivo: ${motivo}`);
 
   try {
     await supabaseClient.from('export_audit_log').insert([{
@@ -863,7 +1093,7 @@ async function confirmarExportarFicha() {
       tipo: 'ficha_individual',
       paciente_dni: p.paciente_dni,
       motivo,
-      metadata: { alerta_seguridad: false }
+      metadata: { alerta_seguridad: false, formato: 'pdf', cantidad_evoluciones: evoluciones.length }
     }]);
   } catch (e) { console.warn(e); }
 
@@ -923,6 +1153,8 @@ function cargarFichaParaEditar() {
   setVal('triajeNivel', p.triaje_nivel);
   setVal('patologiaDual', p.patologia_dual);
   setVal('riesgoInminente', p.riesgo_inminente);
+  setVal('nombreProfesional', p.nombre_profesional);
+  setVal('mpProfesional', p.mp_profesional);
   setVal('tipoDocumento', p.tipo_documento);
   setVal('pacienteDni', p.paciente_dni);
   setVal('pacienteNombre', p.paciente_nombre);
@@ -974,6 +1206,18 @@ function cargarFichaParaEditar() {
   setVal('latitud', p.latitud);
   setVal('longitud', p.longitud);
 
+  // Motivo de Primer Consulta y Primer Observación: fijos (readonly) al editar ficha existente
+  const motivoEl = document.getElementById('motivoConsulta');
+  const obsEl = document.getElementById('observaciones');
+  if (motivoEl) {
+    motivoEl.readOnly = true;
+    motivoEl.classList.add('bg-slate-100', 'cursor-not-allowed');
+  }
+  if (obsEl) {
+    obsEl.readOnly = true;
+    obsEl.classList.add('bg-slate-100', 'cursor-not-allowed');
+  }
+
   const geoStatus = document.getElementById('geoStatus');
   if (geoStatus && p.latitud && p.longitud) {
     geoStatus.textContent = `Ubicación guardada: ${p.latitud}, ${p.longitud}`;
@@ -994,6 +1238,8 @@ async function guardarHistoriaClinica(e) {
     triaje_nivel: getVal('triajeNivel'),
     patologia_dual: getVal('patologiaDual'),
     riesgo_inminente: getVal('riesgoInminente'),
+    nombre_profesional: getVal('nombreProfesional'),
+    mp_profesional: getVal('mpProfesional'),
     tipo_documento: getVal('tipoDocumento'),
     paciente_dni: getVal('pacienteDni'),
     paciente_nombre: getVal('pacienteNombre'),
