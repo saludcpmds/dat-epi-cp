@@ -1,6 +1,7 @@
 /**
  * Ficha Clínica y Sala de Situación Epidemiológica
  * Dirección de Asistencia y Tratamiento (MDS Corrientes)
+ * Versión optimizada para respuesta táctil y pantallas móviles
  */
 
 const SUPABASE_URL = window.ENV?.SUPABASE_URL;
@@ -18,7 +19,7 @@ const state = { pacienteActual: null, currentUser: null };
 const SEARCH_LIMIT = 50;
 const ADMIN_EMAILS = ['armandojara07@gmail.com', 'laurandreabenitez@gmail.com'];
 
-// --- AUDITORÍA Y TRAZABILIDAD ---
+// --- REGISTRO DE AUDITORÍA Y TRAZABILIDAD ---
 async function registrarActividad(accion, detalle, metadata = {}) {
   if (!state.currentUser) return;
   try {
