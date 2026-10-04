@@ -1206,16 +1206,20 @@ function cargarFichaParaEditar() {
   setVal('latitud', p.latitud);
   setVal('longitud', p.longitud);
 
-  // Motivo de Primer Consulta y Primer Observación: fijos (readonly) al editar ficha existente
+  // Motivo de Primer Consulta y Primer Observación: fijos solo si ya tienen valor guardado
   const motivoEl = document.getElementById('motivoConsulta');
   const obsEl = document.getElementById('observaciones');
   if (motivoEl) {
-    motivoEl.readOnly = true;
-    motivoEl.classList.add('bg-slate-100', 'cursor-not-allowed');
+    const tieneMotivo = !!(p.motivo_consulta && String(p.motivo_consulta).trim());
+    motivoEl.readOnly = tieneMotivo;
+    motivoEl.classList.toggle('bg-slate-100', tieneMotivo);
+    motivoEl.classList.toggle('cursor-not-allowed', tieneMotivo);
   }
   if (obsEl) {
-    obsEl.readOnly = true;
-    obsEl.classList.add('bg-slate-100', 'cursor-not-allowed');
+    const tieneObs = !!(p.observaciones && String(p.observaciones).trim());
+    obsEl.readOnly = tieneObs;
+    obsEl.classList.toggle('bg-slate-100', tieneObs);
+    obsEl.classList.toggle('cursor-not-allowed', tieneObs);
   }
 
   const geoStatus = document.getElementById('geoStatus');
@@ -1367,18 +1371,35 @@ async function abrirModalAuditoria() {
 
       const div = document.createElement('div');
       div.className = 'p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex justify-between items-center gap-4';
-      div.innerHTML = `
-        <div>
-          <span class="font-bold text-slate-900">${row.user_name || row.user_email}</span>
-          <span class="ml-2 font-mono px-2 py-0.5 rounded text-[10px] bg-sky-100 text-sky-800 font-bold">${row.accion}</span>
-          <p class="text-slate-600 mt-1">${row.detalle}</p>
-        </div>
-        <span class="font-mono text-slate-400 whitespace-nowrap text-[11px]">${fecha}</span>
-      `;
+
+      const left = document.createElement('div');
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'font-bold text-slate-900';
+      nameSpan.textContent = row.user_name || row.user_email || '—';
+
+      const accionSpan = document.createElement('span');
+      accionSpan.className = 'ml-2 font-mono px-2 py-0.5 rounded text-[10px] bg-sky-100 text-sky-800 font-bold';
+      accionSpan.textContent = row.accion || '';
+
+      const detalleP = document.createElement('p');
+      detalleP.className = 'text-slate-600 mt-1';
+      detalleP.textContent = row.detalle || '';
+
+      left.append(nameSpan, accionSpan, detalleP);
+
+      const fechaSpan = document.createElement('span');
+      fechaSpan.className = 'font-mono text-slate-400 whitespace-nowrap text-[11px]';
+      fechaSpan.textContent = fecha;
+
+      div.append(left, fechaSpan);
       lista.appendChild(div);
     });
   } catch (err) {
-    lista.innerHTML = `<p class="text-center text-red-500 text-sm py-4">Error al cargar actividad: ${err.message}</p>`;
+    lista.textContent = '';
+    const errP = document.createElement('p');
+    errP.className = 'text-center text-red-500 text-sm py-4';
+    errP.textContent = 'Error al cargar actividad: ' + (err.message || '');
+    lista.appendChild(errP);
   }
 }
 
