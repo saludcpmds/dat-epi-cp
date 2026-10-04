@@ -141,8 +141,7 @@
       <section class="hero-dashboard relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-r from-sky-50/80 via-white to-sky-50/50 p-6 sm:p-8 shadow-sm">
         <div class="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p class="font-mono text-xs uppercase tracking-widest text-sky-700 font-semibold">REGISTRO ÚNICO POR DNI Y SALA DE SITUACIÓN</p>
-            <h1 class="mt-2 font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight text-slate-900">Historias Clínicas</h1>
+            <h1 class="mt-2 font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight text-slate-900">Registro Único de Paciente</h1>
             <p class="mt-2 text-sm text-slate-600 max-w-xl">Sistema epidemiológico de asistencia y seguimiento de consumos problemáticos.</p>
           </div>
           <div class="text-right">
@@ -294,7 +293,8 @@
                 <label class="block text-xs font-medium text-slate-600" for="tipoEntrada">Tipo de Entrada</label>
                 <select id="tipoEntrada" class="mt-1 w-full text-xs p-2 border rounded-lg bg-white">
                   <option value="Evolución">Evolución</option>
-                  <option value="Ingreso">Ingreso</option>
+                  <option value="Intervención / Entrevista">Intervención / Entrevista</option>
+                  <option value="Re-ingreso">Re-ingreso</option>
                 </select>
               </div>
               <div class="sm:col-span-2">
@@ -325,11 +325,14 @@
           <div id="timelineContenedor" class="relative border-l-2 border-sky-100 pl-4 sm:pl-6 space-y-6 ml-1 sm:ml-2"></div>
 
           <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
-            <select id="cambioEstadoRapido" class="w-full sm:w-64 text-sm font-semibold p-2.5 rounded-xl border border-slate-300 bg-white">
-              <option value="en_tratamiento">En tratamiento</option>
-              <option value="en_seguimiento">En seguimiento</option>
-              <option value="egreso">Egreso</option>
-            </select>
+            <div class="w-full sm:w-72">
+              <label class="block text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1" for="cambioEstadoRapido">Estado epidemiológico del caso</label>
+              <select id="cambioEstadoRapido" class="w-full text-sm font-semibold p-2.5 rounded-xl border border-slate-300 bg-white">
+                <option value="en_tratamiento">En tratamiento</option>
+                <option value="en_seguimiento">En seguimiento</option>
+                <option value="egreso">Egreso</option>
+              </select>
+            </div>
             <button id="btnExportarExcel" type="button" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 font-semibold text-xs text-slate-700 transition flex items-center justify-center gap-2">
               <span>Exportar PDF</span>
             </button>
@@ -419,12 +422,13 @@
               <input type="text" id="pacienteDni" required maxlength="20" class="mt-1 block w-full px-3 py-2 border rounded-md">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700" for="estadoPaciente">Estado del Paciente</label>
-              <select id="estadoPaciente" class="mt-1 block w-full px-3 py-2 border rounded-md bg-white">
-                <option value="en_tratamiento">En tratamiento</option>
+              <label class="block text-sm font-medium text-gray-700" for="estadoPaciente">Estado epidemiológico del caso</label>
+              <select id="estadoPaciente" class="mt-1 block w-full px-3 py-2 border rounded-md bg-slate-100 cursor-not-allowed" disabled title="Al crear la ficha el estado se asigna automáticamente como En tratamiento. Cambialo desde el pie de la ficha.">
+                <option value="en_tratamiento" selected>En tratamiento</option>
                 <option value="en_seguimiento">En seguimiento</option>
                 <option value="egreso">Egreso</option>
               </select>
+              <p class="text-[10px] text-slate-500 mt-1">Se asigna como &quot;En tratamiento&quot; al crear. Para cambiarlo usá el pie de la ficha.</p>
             </div>
           </div>
 
