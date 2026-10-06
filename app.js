@@ -17,7 +17,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 const state = { pacienteActual: null, currentUser: null };
 const SEARCH_LIMIT = 50;
-const ADMIN_EMAILS = ['armandojara07@gmail.com', 'laurandreabenitez@gmail.com'];
+const ADMIN_EMAILS = ['armandojara07@gmail.com', 'laurandreabenitez@gmail.com', 'Lic.santiagocelia@gmail.com'];
 
 // --- REGISTRO DE AUDITORÍA Y TRAZABILIDAD ---
 async function registrarActividad(accion, detalle, metadata = {}) {
